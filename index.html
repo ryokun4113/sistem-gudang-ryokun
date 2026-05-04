@@ -226,7 +226,7 @@
                 <button onclick="switchTab('users')" class="sidebar-item w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800/50 hidden" id="nav-users"><i data-lucide="users" class="w-5 h-5"></i><span class="font-bold text-sm">Manajemen Akses</span></button>
             </div>
 
-            <!-- ASISTEN AI J.A.R.V.I.S (DI DALAM SIDEBAR) - DIUPGRADE -->
+            <!-- ASISTEN AI J.A.R.V.I.S (DI DALAM SIDEBAR) -->
             <div id="drone-assistant" class="hidden mt-8 mb-4 flex justify-center w-full">
                 <div class="group relative flex flex-col w-36 h-44 cursor-help bg-[#010410] border-2 border-slate-700 hover:border-cyan-500 rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-300" onclick="showAlert('SISTEM AI PEMANTAU AKTIF:\nAI secara real-time memonitor koneksi, integritas database lokal, dan seluruh audit trail sistem melalui Feed CCTV virtual ini.')">
                     
@@ -374,7 +374,7 @@
     <div id="alert-modal" class="hidden fixed inset-0 z-[600] flex items-center justify-center p-4 modal-backdrop bg-black/80 backdrop-blur-sm">
         <div class="glass-effect bg-carbon w-full max-w-sm rounded-[40px] border border-red-900/50 p-10 shadow-2xl text-center hud-card hud-red">
             <h3 class="text-xl font-black text-white uppercase italic mb-2">Informasi Sistem</h3>
-            <p id="alert-message" class="text-xs text-slate-400 font-medium uppercase mb-8 tracking-widest leading-relaxed"></p>
+            <p id="alert-message" class="text-xs text-slate-400 font-medium uppercase mb-8 tracking-widest leading-relaxed whitespace-pre-wrap"></p>
             <button onclick="closeAlert()" class="btn-interact cyber-cut w-full py-4 font-black text-white uppercase tracking-widest bg-red-600 hover:bg-red-500 transition-all">Dimengerti</button>
         </div>
     </div>
@@ -498,6 +498,8 @@
         let currentSessionName = ''; 
         let isOpnameActive = false;
         let opnameData = { expected: [], scanned: [], extra: [], out: [] };
+        
+        // State Modals
         let itemToDelete = null;
         let itemToEdit = null;
         let currentInventorySort = 'newest';
@@ -520,9 +522,27 @@
         }
 
         // ==========================================
-        // PEMBERSIHAN LAYAR SETELAH PRINT/CETAK
+        // AI DRONE MESSAGE ANIMATION (FIX MISSING FUNCTION)
         // ==========================================
-        // GOOGLE SHEETS SYNC LOGIC
+        window.triggerDroneMessage = function(msg, type) {
+            const textEl = document.getElementById('drone-text');
+            if(!textEl) return;
+            textEl.innerText = msg;
+            
+            // Set warna berdasarkan tipe
+            if(type === 'error') textEl.className = "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] md:text-[9px] font-black text-red-300 bg-red-950/95 px-3 py-2 rounded-lg border border-red-500/50 opacity-100 transition-all duration-300 transform scale-100 z-50 shadow-[0_0_15px_rgba(239,68,68,0.6)] text-center w-[90%] whitespace-normal";
+            else if(type === 'success') textEl.className = "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] md:text-[9px] font-black text-emerald-300 bg-emerald-950/95 px-3 py-2 rounded-lg border border-emerald-500/50 opacity-100 transition-all duration-300 transform scale-100 z-50 shadow-[0_0_15px_rgba(16,185,129,0.6)] text-center w-[90%] whitespace-normal";
+            else textEl.className = "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] md:text-[9px] font-black text-cyan-300 bg-cyan-950/95 px-3 py-2 rounded-lg border border-cyan-500/50 opacity-100 transition-all duration-300 transform scale-100 z-50 shadow-[0_0_15px_rgba(34,211,238,0.6)] text-center w-[90%] whitespace-normal";
+
+            // Sembunyikan otomatis setelah 3 detik
+            setTimeout(() => {
+                textEl.style.opacity = '0';
+                textEl.style.transform = 'translate(-50%, -50%) scale(0.9)';
+            }, 3000);
+        }
+
+        // ==========================================
+        // GOOGLE SHEETS SYNC LOGIC (FIXED)
         // ==========================================
         function openDatabaseSettings() { 
             document.getElementById('db-script-url').value = APPS_SCRIPT_URL; 
@@ -533,6 +553,8 @@
         function setDBStatus(status) {
             const dbText = document.getElementById('db-text');
             const dbDot = document.getElementById('db-dot');
+            if(!dbText || !dbDot) return;
+            
             if(status === 'synced') {
                 dbText.innerText = "DB SYNCED";
                 dbText.className = "text-[9px] font-black text-emerald-500 uppercase tracking-widest font-mono";
@@ -555,36 +577,44 @@
             }
             if(!APPS_SCRIPT_URL) { 
                 setDBStatus('local');
-                if(manual) { openDatabaseSettings(); showAlert("Masukkan URL Web App dari Google Script Anda terlebih dahulu."); }
+                if(manual) { closeDatabaseSettings(); showAlert("Harap Masukkan URL Web App Google Script Anda terlebih dahulu.\n(Data sementara disimpan lokal)"); }
                 else if(showSyncAlert) { showAlert("DATA BERHASIL DISIMPAN KE LOKAL (URL SPREADSHEET BELUM DIATUR)"); }
                 return; 
             }
             if(!navigator.onLine) { 
                 setDBStatus('local'); 
-                if(manual) showAlert("Koneksi Internet Terputus. Data saat ini hanya disimpan di Perangkat Lokal."); 
+                if(manual) { closeDatabaseSettings(); showAlert("Koneksi Internet Terputus!\nData saat ini hanya disimpan di Perangkat Lokal (Offline)."); } 
                 else if(showSyncAlert) showAlert("DATA BERHASIL DISIMPAN KE LOKAL (MODE OFFLINE)");
                 return; 
             }
 
-            if(manual || showSyncAlert) triggerDroneMessage("MEMULAI SINKRONISASI CLOUD...", "info");
+            if(typeof triggerDroneMessage === 'function') {
+                if(manual || showSyncAlert) triggerDroneMessage("MEMULAI SINKRONISASI CLOUD...", "info");
+            }
             
             try {
                 await fetch(APPS_SCRIPT_URL, { 
                     method: 'POST', 
-                    mode: 'no-cors', 
+                    mode: 'no-cors', // POST ke G.Script dari Frontend butuh no-cors
                     headers: { 'Content-Type': 'text/plain' }, 
                     body: JSON.stringify({ action: 'sync', inventory: inventory, logs: mutationLogs }) 
                 });
                 
-                if(manual) { closeDatabaseSettings(); setTimeout(() => triggerDroneMessage("DATABASE CLOUD SYNC BERHASIL", "success"), 1000); }
-                if(showSyncAlert) { showAlert("DATA BERHASIL DISINKRONKAN KE SPREADSHEET!"); }
-                
                 setDBStatus('synced'); 
+                
+                if(manual) { 
+                    closeDatabaseSettings(); 
+                    if(typeof triggerDroneMessage === 'function') setTimeout(() => triggerDroneMessage("DATABASE CLOUD SYNC BERHASIL", "success"), 1000); 
+                    showAlert("INTEGRASI BERHASIL!\nURL tersimpan dan data telah berhasil disinkronkan ke Google Sheets.");
+                } else if(showSyncAlert) { 
+                    showAlert("DATA BERHASIL DISINKRONKAN KE SPREADSHEET!"); 
+                }
+                
             } catch(e) { 
                 console.error(e);
                 setDBStatus('failed'); 
-                if(manual) triggerDroneMessage("GAGAL MENGHUBUNGI DATABASE CLOUD", "error");
-                if(showSyncAlert) { showAlert("SINKRONISASI ONLINE GAGAL."); }
+                if(typeof triggerDroneMessage === 'function') triggerDroneMessage("GAGAL MENGHUBUNGI DATABASE CLOUD", "error");
+                if(manual || showSyncAlert) { showAlert("SINKRONISASI ONLINE GAGAL!\nPastikan URL Web App Google Script Anda benar dan koneksi internet stabil."); }
             }
         }
 
@@ -596,6 +626,8 @@
             const eye = document.getElementById('drone-eye');
             const rings = document.querySelectorAll('.ai-ring');
             
+            if(!netDot) return;
+
             if(navigator.onLine) {
                 netDot.className = "status-dot bg-emerald-500 text-emerald-500"; netText.innerText = "ONLINE"; netText.className = "text-[9px] font-black text-emerald-500 uppercase tracking-widest font-mono";
                 
@@ -629,7 +661,7 @@
                     }
                 });
                 
-                if(currentUser) triggerDroneMessage("PERINGATAN: KONEKSI TERPUTUS. MODE OFFLINE AKTIF.", "error");
+                if(currentUser && typeof triggerDroneMessage === 'function') triggerDroneMessage("PERINGATAN: KONEKSI TERPUTUS. MODE OFFLINE AKTIF.", "error");
                 
                 setDBStatus('local'); 
             }
@@ -701,6 +733,117 @@
                 if(dateEl) dateEl.innerText = now.toLocaleDateString('id-ID', options);
             }, 1000);
         }
+
+        // ==========================================
+        // MODAL HANDLERS (EDIT, DELETE, DETAILS) - FIXED!
+        // ==========================================
+        
+        // 1. DETAIL MODAL
+        window.openDetailModal = function(id) {
+            const item = inventory.find(i => i.id === id);
+            if(!item) return;
+            const content = document.getElementById('det-dynamic-content');
+            content.innerHTML = `
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-[#020617] p-4 rounded-2xl border border-slate-800"><p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Nama Barang</p><p class="font-black text-white text-sm md:text-base uppercase">${item.name}</p></div>
+                    <div class="bg-[#020617] p-4 rounded-2xl border border-slate-800"><p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Kode SKU / Barcode</p><p class="font-mono text-emerald-500 font-bold text-sm md:text-base">${item.id}</p></div>
+                    <div class="bg-[#020617] p-4 rounded-2xl border border-slate-800"><p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Kategori</p><p class="font-bold text-slate-300 uppercase">${item.category}</p></div>
+                    <div class="bg-[#020617] p-4 rounded-2xl border border-slate-800"><p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Nomor Seri (S/N)</p><p class="font-mono text-slate-300 font-bold uppercase">${item.serial}</p></div>
+                    <div class="bg-[#020617] p-4 rounded-2xl border border-slate-800"><p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Nomor Popor</p><p class="font-mono text-slate-300 font-bold uppercase">${item.popor || '-'}</p></div>
+                    <div class="bg-[#020617] p-4 rounded-2xl border border-slate-800"><p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Status Fisik</p><p class="font-black ${item.status === 'Di Gudang' ? 'text-emerald-500' : 'text-orange-500'} uppercase">${item.status}</p></div>
+                    <div class="bg-[#020617] p-4 rounded-2xl border border-slate-800 col-span-2"><p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Pemegang / Penanggung Jawab</p><p class="font-black text-blue-400 uppercase text-lg">${item.holder || '-'}</p></div>
+                    <div class="bg-[#020617] p-4 rounded-2xl border border-slate-800 col-span-2"><p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Keterangan Tambahan / Kondisi</p><p class="font-medium text-slate-400 uppercase">${item.note || '-'}</p></div>
+                </div>
+            `;
+            document.getElementById('detail-modal').classList.remove('hidden');
+        };
+        window.closeDetailModal = function() { document.getElementById('detail-modal').classList.add('hidden'); };
+
+        // 2. EDIT MODAL
+        window.openEditModal = function(id) {
+            const item = inventory.find(i => i.id === id);
+            if(!item) return;
+            itemToEdit = id; // Simpan ID aset yang sedang diedit
+            document.getElementById('edit-name').value = item.name;
+            document.getElementById('edit-category').value = item.category;
+            document.getElementById('edit-serial').value = item.serial;
+            document.getElementById('edit-popor').value = item.popor || '-';
+            document.getElementById('edit-holder').value = item.holder || '-';
+            document.getElementById('edit-note').value = item.note || '-';
+            document.getElementById('edit-modal').classList.remove('hidden');
+        };
+        window.closeEditModal = function() { itemToEdit = null; document.getElementById('edit-modal').classList.add('hidden'); };
+        
+        window.saveEditItem = function() {
+            if(!itemToEdit) return;
+            const itemIndex = inventory.findIndex(i => i.id === itemToEdit);
+            
+            if(itemIndex > -1) {
+                // Update Value
+                inventory[itemIndex].name = document.getElementById('edit-name').value.toUpperCase().trim();
+                inventory[itemIndex].category = document.getElementById('edit-category').value.toUpperCase().trim();
+                inventory[itemIndex].serial = document.getElementById('edit-serial').value.toUpperCase().trim();
+                inventory[itemIndex].popor = document.getElementById('edit-popor').value.toUpperCase().trim();
+                inventory[itemIndex].holder = document.getElementById('edit-holder').value.toUpperCase().trim();
+                inventory[itemIndex].note = document.getElementById('edit-note').value.toUpperCase().trim();
+                
+                // Masukkan ke Log Audit
+                mutationLogs.unshift({ 
+                    id: inventory[itemIndex].id, 
+                    name: inventory[itemIndex].name, 
+                    status: inventory[itemIndex].status, 
+                    type: 'EDIT', 
+                    holder: inventory[itemIndex].holder, 
+                    time: new Date().toLocaleTimeString('id-ID'), 
+                    fullDate: new Date().toLocaleDateString('id-ID'), 
+                    operator: currentUser ? currentUser.username : "SYSTEM", 
+                    timestamp: Date.now() 
+                });
+
+                save(false);
+                closeEditModal();
+                renderInventory();
+                showAlert("DATA ASET BERHASIL DIPERBARUI!");
+            }
+        };
+
+        // 3. ADMIN (DELETE) MODAL
+        window.openAdminModal = function(id) {
+            itemToDelete = id;
+            document.getElementById('admin-name-input').value = '';
+            document.getElementById('admin-modal').classList.remove('hidden');
+        };
+        window.closeAdminModal = function() { itemToDelete = null; document.getElementById('admin-modal').classList.add('hidden'); };
+        
+        window.confirmDeletion = function() {
+            const adminName = document.getElementById('admin-name-input').value.toUpperCase().trim();
+            if(!adminName) return showAlert("NAMA ADMIN WAJIB DIISI UNTUK VERIFIKASI PENGHAPUSAN!");
+            if(!itemToDelete) return;
+            
+            const item = inventory.find(i => i.id === itemToDelete);
+            if(item) {
+                // Masukkan ke log Audit Penghapusan
+                mutationLogs.unshift({ 
+                    id: item.id, 
+                    name: item.name, 
+                    status: 'DELETED', 
+                    type: 'DELETE', 
+                    holder: item.holder, 
+                    time: new Date().toLocaleTimeString('id-ID'), 
+                    fullDate: new Date().toLocaleDateString('id-ID'), 
+                    operator: adminName, 
+                    timestamp: Date.now() 
+                });
+                
+                // Hapus item dari array inventory
+                inventory = inventory.filter(i => i.id !== itemToDelete);
+                
+                save(false);
+                closeAdminModal();
+                renderInventory();
+                showAlert("ASET BERHASIL DIHAPUS DARI SISTEM!");
+            }
+        };
 
         // ==========================================
         // MENUS & RENDER FUNCTIONS
@@ -932,7 +1075,10 @@
             if (overdueItems.length >= 3) {
                 document.body.classList.add('lockdown-mode');
                 if(!window.lockdownAlerted) {
-                    setTimeout(() => { triggerDroneMessage("LOCKDOWN PROTOCOL AKTIF. BANYAK ASET JATUH TEMPO!", "error"); speakText("Peringatan kritis. Terlalu banyak aset yang melewati batas waktu pengembalian."); }, 1000);
+                    setTimeout(() => { 
+                        if(typeof triggerDroneMessage === 'function') triggerDroneMessage("LOCKDOWN PROTOCOL AKTIF. BANYAK ASET JATUH TEMPO!", "error"); 
+                        speakText("Peringatan kritis. Terlalu banyak aset yang melewati batas waktu pengembalian."); 
+                    }, 1000);
                     window.lockdownAlerted = true;
                 }
             } else {
@@ -974,8 +1120,18 @@
 
         window.toggleRapidScan = function(isChecked) {
             isRapidScanMode = isChecked; const wrapper = document.getElementById('scanner-crt-wrapper'); const input = document.getElementById('scan-input') || document.getElementById('opname-scan-input');
-            if (isChecked) { if (wrapper) wrapper.classList.add('rapid-pulse'); if (input) { input.focus(); speakText("Mode Pemindaian Kilat diaktifkan."); triggerDroneMessage("RAPID SCAN ON", "info"); } } 
-            else { if (wrapper) wrapper.classList.remove('rapid-pulse'); speakText("Mode Pemindaian Kilat dinonaktifkan."); }
+            if (isChecked) { 
+                if (wrapper) wrapper.classList.add('rapid-pulse'); 
+                if (input) { 
+                    input.focus(); 
+                    speakText("Mode Pemindaian Kilat diaktifkan."); 
+                    if(typeof triggerDroneMessage === 'function') triggerDroneMessage("RAPID SCAN ON", "info"); 
+                } 
+            } 
+            else { 
+                if (wrapper) wrapper.classList.remove('rapid-pulse'); 
+                speakText("Mode Pemindaian Kilat dinonaktifkan."); 
+            }
         };
 
         window.updateSessionName = function(val) { currentSessionName = val.toUpperCase(); };
@@ -1229,7 +1385,7 @@
                     const parsed = JSON.parse(e.target.result);
                     if (parsed.inventory && parsed.mutationLogs && parsed.users) {
                         inventory = parsed.inventory; mutationLogs = parsed.mutationLogs; users = parsed.users; if(parsed.settings) appSettings = parsed.settings;
-                        save(); showAlert("RESTORE DATABASE BERHASIL!\\nSeluruh data Inventaris, Log Mutasi, dan Akun telah dikembalikan ke sistem."); switchTab('dashboard'); 
+                        save(); showAlert("RESTORE DATABASE BERHASIL!\nSeluruh data Inventaris, Log Mutasi, dan Akun telah dikembalikan ke sistem."); switchTab('dashboard'); 
                     } else { showAlert("FORMAT FILE BACKUP TIDAK VALID! Pastikan Anda memilih file JSON backup dari sistem ini."); }
                 } catch (err) { showAlert("GAGAL MEMBACA FILE BACKUP!"); }
             };
@@ -1414,7 +1570,7 @@
 
         window.startOpname = function() {
             isOpnameActive = true;
-            triggerDroneMessage("SESI AUDIT OPNAME DIMULAI", "info");
+            if(typeof triggerDroneMessage === 'function') triggerDroneMessage("SESI AUDIT OPNAME DIMULAI", "info");
             const expectedIn = inventory.filter(i => i.status === 'Di Gudang').map(i => i.id);
             const outItems = inventory.filter(i => i.status === 'Keluar').map(i => i.id);
             opnameData = { expected: expectedIn, scanned: [], extra: [], out: outItems };
@@ -1423,7 +1579,7 @@
 
         window.stopOpname = function() {
             isOpnameActive = false;
-            triggerDroneMessage("SESI AUDIT SELESAI", "success");
+            if(typeof triggerDroneMessage === 'function') triggerDroneMessage("SESI AUDIT SELESAI", "success");
             renderOpname();
         }
 
@@ -1442,13 +1598,13 @@
                 }
             } else if (opnameData.out.includes(code)) {
                 playBeep('OUT'); speakText("Perhatian, aset ini tercatat sedang dipinjam.");
-                triggerDroneMessage("ASET BERSTATUS KELUAR", "error");
+                if(typeof triggerDroneMessage === 'function') triggerDroneMessage("ASET BERSTATUS KELUAR", "error");
             } else {
                 if(!opnameData.extra.includes(code)) {
                     opnameData.extra.push(code);
                 }
                 playBeep('ERROR'); speakText("Aset tidak dikenal.");
-                triggerDroneMessage("BARCODE TIDAK DIKENAL", "error");
+                if(typeof triggerDroneMessage === 'function') triggerDroneMessage("BARCODE TIDAK DIKENAL", "error");
             }
             renderOpname();
         }
@@ -1687,7 +1843,7 @@
         window.logout = function() { currentUser = null; save(); clearTimeout(inactivityTimeout); window.location.reload(); }
 
         window.triggerDroneScan = function(tabId) {
-            triggerDroneMessage("MEMINDAI MENU...", "info");
+            if(typeof triggerDroneMessage === 'function') triggerDroneMessage("MEMINDAI MENU...", "info");
         };
 
         function startAIMonitoring() {
@@ -1709,7 +1865,7 @@
                 ];
                 const randomMsg = idleMessages[Math.floor(Math.random() * idleMessages.length)];
                 
-                triggerDroneMessage(randomMsg, 'info');
+                if(typeof triggerDroneMessage === 'function') triggerDroneMessage(randomMsg, 'info');
             }, 35000); // Memantau setiap 35 detik secara otomatis
         }
 
