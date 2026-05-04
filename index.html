@@ -398,57 +398,24 @@
         </div>
     </div>
 
-    <!-- MODAL DETAIL ASET -->
-    <div id="detail-modal" class="hidden fixed inset-0 z-[105] flex items-center justify-center p-4 modal-backdrop bg-black/80 backdrop-blur-sm">
-        <div class="glass-effect bg-carbon w-full max-w-3xl rounded-[40px] border p-6 md:p-8 shadow-2xl relative flex flex-col max-h-[90vh] hologram-sweep-blue hud-card hud-blue">
-            <button onclick="closeDetailModal()" class="absolute top-4 right-4 md:top-6 md:right-6 text-slate-500 hover:text-white bg-slate-800 p-2 rounded-full border border-slate-700 transition-all btn-interact"><i data-lucide="x" class="w-5 h-5"></i></button>
-            <div class="flex items-center gap-4 mb-6 border-b border-slate-800 pb-6">
-                <div class="w-10 h-10 md:w-12 md:h-12 bg-blue-900/20 rounded-2xl flex items-center justify-center border border-blue-800/30 cyber-cut"><i data-lucide="info" class="w-5 h-5 text-blue-500"></i></div>
+    <!-- MODAL DETAIL ASET (CYBERPUNK HUD VER.) -->
+    <div id="detail-modal" class="hidden fixed inset-0 z-[105] flex items-center justify-center p-2 md:p-4 modal-backdrop bg-black/90 backdrop-blur-md">
+        <div class="glass-effect bg-carbon w-full max-w-5xl rounded-[30px] border border-blue-900/50 p-4 md:p-8 shadow-[0_0_50px_rgba(59,130,246,0.15)] relative flex flex-col max-h-[95vh] hud-card hud-blue">
+            <button onclick="closeDetailModal()" class="absolute top-4 right-4 md:top-6 md:right-6 text-slate-500 hover:text-white bg-[#020617] p-2 rounded-xl border border-slate-800 transition-all btn-interact z-50 shadow-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+            
+            <div class="flex items-center gap-4 mb-6 border-b border-slate-800 pb-4 md:pb-6 shrink-0 pt-2 md:pt-0">
+                <div class="w-12 h-12 md:w-16 md:h-16 bg-blue-900/20 rounded-2xl flex items-center justify-center border border-blue-500/30 cyber-cut relative overflow-hidden shrink-0">
+                    <div class="absolute inset-0 bg-[radial-gradient(rgba(59,130,246,0.2)_1px,transparent_1px)] bg-[size:4px_4px] opacity-30"></div>
+                    <i data-lucide="cpu" class="w-6 h-6 md:w-8 md:h-8 text-blue-400 animate-pulse relative z-10"></i>
+                </div>
                 <div>
-                    <h3 class="text-xl md:text-2xl font-black text-white uppercase italic leading-tight"><span class="text-blue-500/50 mr-2">[</span>Rincian Lengkap Aset<span class="text-blue-500/50 ml-2">]</span></h3>
-                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Audit Trail & Histori Mutasi</p>
+                    <h3 class="text-lg md:text-3xl font-black text-white uppercase italic leading-none tracking-tighter"><span class="text-blue-500/50 mr-2">[</span>DOSIR ASET TAKTIS<span class="text-blue-500/50 ml-2">]</span></h3>
+                    <p class="text-[8px] md:text-[10px] font-black text-blue-500/80 uppercase tracking-[0.3em] mt-1 md:mt-2">Classified Inventory Data // Secure Access</p>
                 </div>
             </div>
-            <div class="overflow-y-auto custom-scrollbar pr-2 flex-1 space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-[#020617]/80 p-5 rounded-3xl border border-slate-800">
-                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Nama Aset & SKU Barcode</p>
-                        <p class="text-base md:text-lg font-black text-white uppercase" id="det-name"></p>
-                        <p class="text-xs font-mono font-bold text-emerald-500" id="det-sku"></p>
-                    </div>
-                    <div class="bg-[#020617]/80 p-5 rounded-3xl border border-slate-800 flex flex-col justify-center items-start">
-                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Status Saat Ini</p>
-                        <span id="det-status" class="status-badge text-sm px-4 py-2"></span>
-                    </div>
-                    <div class="bg-[#020617]/80 p-5 rounded-3xl border border-slate-800">
-                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Kategori & Identifikasi</p>
-                        <p class="text-xs md:text-sm font-bold text-slate-300 capitalize" id="det-category"></p>
-                        <p class="text-[10px] font-bold text-slate-500 uppercase">S/N: <span id="det-serial" class="text-slate-400 font-mono"></span> | POPOR: <span id="det-popor" class="text-slate-400 font-mono"></span></p>
-                    </div>
-                    <div class="bg-[#020617]/80 p-5 rounded-3xl border border-slate-800">
-                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Pemegang / Lokasi</p>
-                        <p class="text-xs md:text-sm font-black text-emerald-400 capitalize bg-emerald-950/30 inline-block px-3 py-1 rounded-lg border border-emerald-900/50" id="det-holder"></p>
-                    </div>
-                </div>
-                <div class="bg-[#020617]/80 p-5 rounded-3xl border border-slate-800">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tanggal Registrasi Awal</p><p class="text-xs font-bold text-slate-300 font-mono" id="det-date"></p></div>
-                        <div><p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Catatan / Keterangan</p><p class="text-xs font-medium text-slate-300 capitalize" id="det-note"></p></div>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="text-xs font-black text-blue-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2"><i data-lucide="history" class="w-4 h-4"></i> Log Aktivitas Khusus Aset Ini</h4>
-                    <div class="bg-[#020617]/80 rounded-3xl border border-slate-800 overflow-hidden bg-cyber-mesh">
-                        <div class="overflow-x-auto custom-scrollbar scroll-smooth">
-                            <table class="w-full text-left min-w-[500px]">
-                                <thead class="bg-slate-900/80 text-slate-500 text-[9px] font-black uppercase tracking-widest border-b border-slate-800">
-                                    <tr><th class="p-4">Tanggal & Jam</th><th class="p-4">Tipe Aksi</th><th class="p-4 text-center">Status</th><th class="p-4 text-right">Operator / Admin</th></tr>
-                                </thead>
-                                <tbody id="det-history-body" class="divide-y divide-slate-800/50"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+
+            <div id="det-dynamic-content" class="overflow-y-auto custom-scrollbar pr-2 flex-1 space-y-6">
+                <!-- Konten di-inject via JS -->
             </div>
         </div>
     </div>
@@ -1255,7 +1222,7 @@
                     if (parsed.inventory && parsed.mutationLogs && parsed.users) {
                         inventory = parsed.inventory; mutationLogs = parsed.mutationLogs; users = parsed.users; if(parsed.settings) appSettings = parsed.settings;
                         save(); showAlert("RESTORE DATABASE BERHASIL!\\nSeluruh data Inventaris, Log Mutasi, dan Akun telah dikembalikan ke sistem."); switchTab('dashboard'); 
-                    } else { showAlert("FORMAT FILE BACKUP TIDAK VALID! Pastikan Anda memilih file JSON hasil backup dari sistem ini."); }
+                    } else { showAlert("FORMAT FILE BACKUP TIDAK VALID! Pastikan Anda memilih file JSON backup dari sistem ini."); }
                 } catch (err) { showAlert("GAGAL MEMBACA FILE BACKUP!"); }
             };
             reader.readAsText(file); event.target.value = ''; 
@@ -1577,34 +1544,178 @@
         }
 
         // ==========================================
-        // LOGIC MODAL DETAIL, EDIT & DELETE
+        // LOGIC MODAL DETAIL, EDIT & DELETE (DIROMBAK FUTURISTIK)
         // ==========================================
         window.openDetailModal = function(id) {
             const item = inventory.find(i => i.id === id);
             if(!item) return;
-            document.getElementById('det-name').innerText = item.name;
-            document.getElementById('det-sku').innerText = item.id;
-            document.getElementById('det-status').innerText = item.status;
-            document.getElementById('det-status').className = `status-badge text-sm px-4 py-2 ${item.status === 'Di Gudang' ? 'status-gudang' : 'status-keluar'}`;
-            document.getElementById('det-category').innerText = item.category;
-            document.getElementById('det-serial').innerText = item.serial;
-            document.getElementById('det-popor').innerText = item.popor;
-            document.getElementById('det-holder').innerText = item.holder;
-            document.getElementById('det-date').innerText = item.date;
-            document.getElementById('det-note').innerText = item.note;
 
             const itemLogs = mutationLogs.filter(log => log.id === id);
-            document.getElementById('det-history-body').innerHTML = itemLogs.length > 0 ? itemLogs.map(log => `
-                <tr class="hover:bg-slate-800/30 transition-colors">
-                    <td class="p-4"><p class="text-[10px] font-mono text-emerald-500 font-bold">${log.fullDate}</p><p class="text-[9px] text-slate-500 font-mono">${log.time}</p></td>
-                    <td class="p-4"><span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">${log.type} ${log.sessionName && log.sessionName !== 'REGULER' ? `<br><span class="text-[7px] text-blue-400">[${log.sessionName}]</span>` : ''}</span></td>
-                    <td class="p-4 text-center"><span class="status-badge ${log.status === 'Di Gudang' || log.status === 'BARU' ? 'bg-emerald-950/50 text-emerald-500' : (log.status === 'DELETED' ? 'bg-red-950/50 text-red-500' : 'bg-orange-950/50 text-orange-500')}">${log.status}</span></td>
-                    <td class="p-4 text-right"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${log.operator}</p></td>
-                </tr>
-            `).join('') : `<tr><td colspan="4" class="p-8 text-center text-slate-600 text-xs italic font-bold uppercase">Belum ada riwayat aktivitas spesifik.</td></tr>`;
+            
+            // Perhitungan Analitik Data
+            const outLogs = itemLogs.filter(l => l.status === 'Keluar');
+            const totalBorrowed = outLogs.length; // Total siklus peminjaman
+            
+            const lastInLog = itemLogs.find(l => l.status === 'Di Gudang' || l.status === 'BARU');
+            const lastOutLog = itemLogs.find(l => l.status === 'Keluar');
+            const addLog = itemLogs.find(l => l.type === 'ADD');
+            
+            const registrar = addLog ? addLog.operator : 'SYSTEM';
+            const regDate = addLog ? `${addLog.fullDate} ${addLog.time}` : item.date;
 
+            const statusColor = item.status === 'Di Gudang' ? 'text-emerald-400' : 'text-orange-400';
+            const statusBg = item.status === 'Di Gudang' ? 'bg-emerald-950/40 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-orange-950/40 border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.2)]';
+
+            // Perakitan HTML Dinamis untuk HUD Detail
+            const html = `
+                <!-- Top HUD Profile -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                    <!-- Left: Identity & Barcode -->
+                    <div class="lg:col-span-1 bg-[#020617] border border-slate-800 rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl">
+                        <div class="absolute -right-10 -bottom-10 opacity-5 pointer-events-none"><i data-lucide="crosshair" class="w-48 h-48"></i></div>
+                        <div class="relative z-10">
+                            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-2"><i data-lucide="fingerprint" class="w-3 h-3"></i> Identitas Utama</p>
+                            <h4 class="text-xl md:text-2xl font-black text-white uppercase leading-tight mb-3 mt-2">${item.name}</h4>
+                            <div class="inline-flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-xl shadow-inner">
+                                <i data-lucide="barcode" class="w-4 h-4 text-blue-400"></i>
+                                <span class="font-mono text-sm md:text-base font-bold text-blue-400 tracking-widest">${item.id}</span>
+                            </div>
+                        </div>
+                        <div class="mt-8 bg-white/5 p-4 rounded-2xl flex justify-center border border-white/10 backdrop-blur-sm relative z-10">
+                            <svg id="det-barcode-svg" class="w-full max-w-[200px]"></svg>
+                        </div>
+                    </div>
+
+                    <!-- Middle & Right: Tactical Stats -->
+                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <!-- Status Panel -->
+                        <div class="${statusBg} border rounded-3xl p-5 md:p-6 relative overflow-hidden flex flex-col justify-between">
+                            <div class="absolute top-0 right-0 p-5"><div class="w-3 h-3 rounded-full ${item.status === 'Di Gudang' ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]' : 'bg-orange-500 animate-pulse shadow-[0_0_10px_#f97316]'}"></div></div>
+                            <div>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Operasional</p>
+                                <p class="text-2xl md:text-3xl font-black ${statusColor} uppercase tracking-widest mb-4">${item.status}</p>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest">Pemegang / Lokasi Saat Ini</p>
+                                    <p class="text-sm md:text-base font-black text-white uppercase truncate mt-1">${item.holder || '-'}</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-[#020617]/50 p-3 rounded-xl border border-slate-800/50">
+                                        <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Tipe / Kategori</p>
+                                        <p class="text-[10px] md:text-xs font-bold text-slate-300 uppercase truncate">${item.category}</p>
+                                    </div>
+                                    <div class="bg-[#020617]/50 p-3 rounded-xl border border-slate-800/50">
+                                        <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Kondisi / Ket.</p>
+                                        <p class="text-[10px] md:text-xs font-bold text-slate-300 uppercase truncate" title="${item.note}">${item.note}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hardware Specs -->
+                        <div class="bg-[#020617] border border-slate-800 rounded-3xl p-5 md:p-6 flex flex-col justify-center">
+                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-5 flex items-center gap-2"><i data-lucide="settings-2" class="w-4 h-4 text-slate-400"></i> Spesifikasi Hardware</p>
+                            <ul class="space-y-4">
+                                <li class="flex justify-between items-center border-b border-slate-800/50 pb-3">
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">No. Seri (S/N)</span>
+                                    <span class="font-mono text-[11px] md:text-xs font-bold text-emerald-400">${item.serial}</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-slate-800/50 pb-3">
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">No. Popor</span>
+                                    <span class="font-mono text-[11px] md:text-xs font-bold text-emerald-400">${item.popor}</span>
+                                </li>
+                                <li class="flex justify-between items-center bg-blue-900/10 p-3 rounded-xl border border-blue-900/30">
+                                    <span class="text-[10px] text-blue-500/80 font-bold uppercase tracking-wider">Total Dipinjam</span>
+                                    <span class="font-mono text-xs md:text-sm font-black text-blue-400">${totalBorrowed}x SIKLUS</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline / Telemetry -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-[#1e293b]/40 border border-slate-800 rounded-2xl p-4 md:p-5 flex items-center gap-4">
+                        <div class="p-3 bg-slate-900 rounded-xl shrink-0 border border-slate-700 shadow-inner"><i data-lucide="calendar-plus" class="w-5 h-5 text-slate-400"></i></div>
+                        <div class="overflow-hidden">
+                            <p class="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">Waktu Registrasi Awal</p>
+                            <p class="font-mono text-[10px] md:text-xs text-white font-bold my-1 truncate">${regDate}</p>
+                            <p class="text-[8px] font-bold text-emerald-500 uppercase tracking-widest truncate">Oleh: ${registrar}</p>
+                        </div>
+                    </div>
+                    <div class="bg-orange-950/10 border border-orange-900/30 rounded-2xl p-4 md:p-5 flex items-center gap-4">
+                        <div class="p-3 bg-orange-950/50 rounded-xl shrink-0 border border-orange-900/50 shadow-inner"><i data-lucide="log-out" class="w-5 h-5 text-orange-400"></i></div>
+                        <div class="overflow-hidden">
+                            <p class="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">Terakhir Keluar (OUT)</p>
+                            <p class="font-mono text-[10px] md:text-xs text-white font-bold my-1 truncate">${lastOutLog ? `${lastOutLog.fullDate} ${lastOutLog.time}` : 'BELUM PERNAH'}</p>
+                            <p class="text-[8px] font-bold text-orange-400 uppercase tracking-widest truncate">Oleh: ${lastOutLog ? lastOutLog.operator : '-'}</p>
+                        </div>
+                    </div>
+                    <div class="bg-emerald-950/10 border border-emerald-900/30 rounded-2xl p-4 md:p-5 flex items-center gap-4">
+                        <div class="p-3 bg-emerald-950/50 rounded-xl shrink-0 border border-emerald-900/50 shadow-inner"><i data-lucide="log-in" class="w-5 h-5 text-emerald-400"></i></div>
+                        <div class="overflow-hidden">
+                            <p class="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">Terakhir Masuk (IN)</p>
+                            <p class="font-mono text-[10px] md:text-xs text-white font-bold my-1 truncate">${lastInLog ? `${lastInLog.fullDate} ${lastInLog.time}` : 'BELUM PERNAH'}</p>
+                            <p class="text-[8px] font-bold text-emerald-400 uppercase tracking-widest truncate">Oleh: ${lastInLog ? lastInLog.operator : '-'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log / History Terminal -->
+                <div class="mt-2">
+                    <h4 class="text-[10px] md:text-xs font-black text-blue-500 uppercase tracking-[0.3em] mb-4 flex items-center gap-2"><i data-lucide="terminal" class="w-4 h-4"></i> Terminal Log Mutasi Aset</h4>
+                    <div class="bg-[#010410] rounded-3xl border border-slate-800 overflow-hidden bg-cyber-mesh shadow-inner relative">
+                        <div class="absolute inset-0 pointer-events-none opacity-30 crt-scanline z-10"></div>
+                        <div class="overflow-x-auto custom-scrollbar scroll-smooth relative z-20 max-h-[300px]">
+                            <table class="w-full text-left min-w-[700px]">
+                                <thead class="bg-[#020617] text-slate-600 text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] sticky top-0 z-30 shadow-md border-b border-slate-800">
+                                    <tr><th class="p-4 pl-6">T-Stamp // ID</th><th class="p-4">Proses (CMD)</th><th class="p-4 text-center">Status</th><th class="p-4">Pemegang Target</th><th class="p-4 text-right pr-6">Otorisasi (OP)</th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800/80 font-mono text-[9px] md:text-[10px]">
+                                    ${itemLogs.length > 0 ? itemLogs.map(log => `
+                                        <tr class="hover:bg-blue-900/20 transition-colors group">
+                                            <td class="p-4 pl-6">
+                                                <span class="text-blue-400 font-bold">${log.fullDate}</span> <span class="text-slate-500 ml-1">${log.time}</span>
+                                            </td>
+                                            <td class="p-4 text-emerald-400 font-bold">
+                                                ${log.type} ${log.sessionName && log.sessionName !== 'REGULER' ? `<span class="text-[8px] text-purple-400 border border-purple-900/50 bg-purple-900/20 px-1.5 py-0.5 rounded ml-2">#${log.sessionName}</span>` : ''}
+                                            </td>
+                                            <td class="p-4 text-center">
+                                                <span class="px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest ${log.status === 'Di Gudang' || log.status === 'BARU' ? 'bg-emerald-950 text-emerald-400 border border-emerald-900/50' : (log.status === 'DELETED' ? 'bg-red-950 text-red-500 border border-red-900/50' : 'bg-orange-950 text-orange-400 border border-orange-900/50')}">${log.status}</span>
+                                            </td>
+                                            <td class="p-4 text-slate-300 capitalize">${log.holder || '-'}</td>
+                                            <td class="p-4 text-right pr-6 text-slate-500 uppercase group-hover:text-blue-300 transition-colors font-bold">> ${log.operator}</td>
+                                        </tr>
+                                    `).join('') : `<tr><td colspan="5" class="p-10 text-center text-slate-600 font-sans italic font-bold uppercase tracking-widest">_NO_DATA_FOUND_</td></tr>`}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Suntikkan HTML ke kontainer modal
+            document.getElementById('det-dynamic-content').innerHTML = html;
             document.getElementById('detail-modal').classList.remove('hidden');
+            
+            // Render ulang ikon Lucide untuk konten yang baru disuntikkan
+            lucide.createIcons();
+
+            // Render Barcode SVG menggunakan library JsBarcode
+            try {
+                JsBarcode("#det-barcode-svg", item.id, { 
+                    format: "CODE128", 
+                    width: 2, 
+                    height: 50, 
+                    displayValue: false, 
+                    background: "transparent", 
+                    lineColor: "#60a5fa", // Warna biru sci-fi
+                    margin: 0
+                });
+            } catch(e) { console.error("Gagal render barcode di modal", e); }
         };
+
         window.closeDetailModal = function() { document.getElementById('detail-modal').classList.add('hidden'); }
 
         window.openEditModal = function(id) {
