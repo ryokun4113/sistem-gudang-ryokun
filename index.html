@@ -415,7 +415,7 @@
         let itemToEdit = null;
         let currentInventorySort = 'newest';
 
-        function save() {
+        async function save(showSyncAlert = false) {
             localStorage.setItem('ryo_inventory', JSON.stringify(inventory));
             localStorage.setItem('ryo_logs', JSON.stringify(mutationLogs));
             localStorage.setItem('ryo_users', JSON.stringify(users));
@@ -425,7 +425,11 @@
             else sessionStorage.removeItem('ryokun_currentUser');
 
             updateNetworkUI();
-            if(navigator.onLine && APPS_SCRIPT_URL) syncToGoogleSheets(false);
+            if(navigator.onLine && APPS_SCRIPT_URL) {
+                await syncToGoogleSheets(false, showSyncAlert);
+            } else if (showSyncAlert) {
+                showAlert("DATA BERHASIL DISIMPAN KE LOKAL (MODE OFFLINE)");
+            }
         }
 
         // ==========================================
@@ -484,21 +488,63 @@
         function openDatabaseSettings() { document.getElementById('db-script-url').value = APPS_SCRIPT_URL; document.getElementById('db-modal').classList.remove('hidden'); }
         function closeDatabaseSettings() { document.getElementById('db-modal').classList.add('hidden'); }
 
-        async function syncToGoogleSheets(manual = false) {
-            if(manual) { const url = document.getElementById('db-script-url').value.trim(); if(url) { APPS_SCRIPT_URL = url; localStorage.setItem('ryokun_gs_url', url); } }
-            if(!APPS_SCRIPT_URL) { if(manual) showAlert("URL Web App kosong! Masukkan URL Script Google Anda."); return; }
-            if(!navigator.onLine) { if(manual) showAlert("Koneksi Internet Terputus. Data disimpan di Perangkat."); return; }
+        // FUNGSI BARU UNTUK MENGATUR WARNA INDIKATOR DATABASE
+        function setDBStatus(status) {
+            const dbText = document.getElementById('db-text');
+            const dbDot = document.getElementById('db-dot');
+            if(status === 'synced') {
+                dbText.innerText = "DB SYNCED";
+                dbText.className = "text-[9px] font-black text-emerald-500 uppercase tracking-widest font-mono";
+                dbDot.className = "status-dot bg-emerald-500 text-emerald-500";
+            } else if(status === 'local') {
+                dbText.innerText = "LOCAL ONLY";
+                dbText.className = "text-[9px] font-black text-orange-500 uppercase tracking-widest font-mono";
+                dbDot.className = "status-dot bg-orange-500 text-orange-500 animate-pulse";
+            } else if(status === 'failed') {
+                dbText.innerText = "SYNC FAILED";
+                dbText.className = "text-[9px] font-black text-red-500 uppercase tracking-widest font-mono";
+                dbDot.className = "status-dot bg-red-500 text-red-500 animate-pulse";
+            }
+        }
 
+        async function syncToGoogleSheets(manual = false, showSyncAlert = false) {
+            if(manual) { 
+                const url = document.getElementById('db-script-url').value.trim(); 
+                if(url) { APPS_SCRIPT_URL = url; localStorage.setItem('ryokun_gs_url', url); } 
+            }
+            if(!APPS_SCRIPT_URL) { 
+                setDBStatus('local'); // Indikator Oren
+                if(manual) { openDatabaseSettings(); showAlert("Masukkan URL Web App dari Google Script Anda terlebih dahulu."); }
+                else if(showSyncAlert) { showAlert("DATA BERHASIL DISIMPAN KE LOKAL (URL SPREADSHEET BELUM DIATUR)"); }
+                return; 
+            }
+            if(!navigator.onLine) { 
+                setDBStatus('local'); // Indikator Oren
+                if(manual) showAlert("Koneksi Internet Terputus. Data saat ini hanya disimpan di Perangkat Lokal."); 
+                else if(showSyncAlert) showAlert("DATA BERHASIL DISIMPAN KE LOKAL (MODE OFFLINE)");
+                return; 
+            }
+
+            if(manual || showSyncAlert) triggerDroneMessage("MEMULAI SINKRONISASI CLOUD...", "info");
+            
             try {
-                fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'sync', inventory: inventory, logs: mutationLogs }) });
-                if(manual) { closeDatabaseSettings(); triggerDroneMessage("DATABASE CLOUD SYNC BERHASIL", "success"); }
-                document.getElementById('db-text').innerText = "DB SYNCED";
-                document.getElementById('db-dot').className = "status-dot bg-emerald-500 text-emerald-500";
+                // Menggunakan text/plain untuk menghindari blokir CORS (Preflight) dari Google Apps Script
+                await fetch(APPS_SCRIPT_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    headers: { 'Content-Type': 'text/plain' }, 
+                    body: JSON.stringify({ action: 'sync', inventory: inventory, logs: mutationLogs }) 
+                });
+                
+                if(manual) { closeDatabaseSettings(); setTimeout(() => triggerDroneMessage("DATABASE CLOUD SYNC BERHASIL", "success"), 1000); }
+                if(showSyncAlert) { showAlert("DATA SUCCESSFUL SYNCHRONIZED ONLINE"); }
+                
+                setDBStatus('synced'); // Indikator Hijau
             } catch(e) { 
                 console.error(e);
-                document.getElementById('db-text').innerText = "DB FAILED";
-                document.getElementById('db-dot').className = "status-dot bg-red-500 text-red-500 animate-pulse";
+                setDBStatus('failed'); // Indikator Merah
                 if(manual) triggerDroneMessage("GAGAL MENGHUBUNGI DATABASE CLOUD", "error");
+                if(showSyncAlert) { showAlert("DATA FAILED SINGKRON ONLINE"); }
             }
         }
 
@@ -513,11 +559,18 @@
                 netDot.className = "status-dot bg-emerald-500 text-emerald-500"; netText.innerText = "ONLINE"; netText.className = "text-[9px] font-black text-emerald-500 uppercase tracking-widest font-mono";
                 waves.forEach(w => w.className = `ai-wave w-1 rounded-sm transition-colors duration-300 bg-cyan-400 ${w.className.match(/h-\d+/)[0]} ${w.className.match(/animate-\[[^\]]+\]/)[0]}`);
                 if(eye) eye.className = 'w-1 h-2 rounded-sm animate-pulse transition-colors duration-300 bg-cyan-400';
+                
+                // Coba sinkronisasi otomatis ketika internet kembali menyala
+                if(APPS_SCRIPT_URL) syncToGoogleSheets(false, false);
+                else setDBStatus('local');
+
             } else {
                 netDot.className = "status-dot bg-red-500 text-red-500 animate-pulse"; netText.innerText = "OFFLINE (LOCAL MODE)"; netText.className = "text-[9px] font-black text-red-500 uppercase tracking-widest font-mono";
                 waves.forEach(w => w.className = `ai-wave w-1 rounded-sm transition-colors duration-300 bg-red-500 ${w.className.match(/h-\d+/)[0]} ${w.className.match(/animate-\[[^\]]+\]/)[0]}`);
                 if(eye) eye.className = 'w-1 h-2 rounded-sm animate-pulse transition-colors duration-300 bg-red-500';
                 if(currentUser) triggerDroneMessage("PERINGATAN: KONEKSI TERPUTUS. MODE OFFLINE AKTIF.", "error");
+                
+                setDBStatus('local'); // Saat offline, otomatis indikator DB menjadi Oren
             }
         }
         window.addEventListener('online', updateNetworkUI);
@@ -694,7 +747,7 @@
             inventory.push(newItem);
             mutationLogs.unshift({ id: newItem.id, name: newItem.name, status: 'BARU', type: 'ADD', holder: newItem.holder, time: new Date().toLocaleTimeString('id-ID'), fullDate: new Date().toLocaleDateString('id-ID'), operator: currentUser ? currentUser.username : "SYSTEM", timestamp: Date.now() });
 
-            save(); showAlert("DATA BERHASIL DISIMPAN KE DATABASE LOKAL!");
+            save(true); // Parameter true digunakan untuk memunculkan notifikasi status sinkronisasi online
             document.getElementById('in-sku').value = ''; document.getElementById('in-name').value = ''; document.getElementById('in-serial').value = ''; document.getElementById('in-popor').value = ''; document.getElementById('in-note').value = ''; updateLiveBarcode('');
         };
 
@@ -743,6 +796,7 @@
                             <button onclick="backupSystem()" class="btn-interact cyber-cut flex-1 md:flex-none items-center justify-center gap-2 bg-purple-600/20 text-purple-400 px-4 py-3 font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-purple-600 hover:text-white transition-all border border-purple-900/50"><i data-lucide="database" class="w-4 h-4"></i> Backup DB</button>
                             <button onclick="triggerRestore()" class="btn-interact cyber-cut flex-1 md:flex-none items-center justify-center gap-2 bg-pink-600/20 text-pink-400 px-4 py-3 font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-pink-600 hover:text-white transition-all border border-pink-900/50"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Restore DB</button>
                             <input type="file" id="json-import-file" class="hidden" accept=".json" onchange="restoreSystem(event)">
+                            <button onclick="syncToGoogleSheets(true)" class="btn-interact cyber-cut flex-1 md:flex-none items-center justify-center gap-2 bg-cyan-600/20 text-cyan-500 px-4 py-3 font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-cyan-600 hover:text-white transition-all border border-cyan-900/50"><i data-lucide="cloud-upload" class="w-4 h-4"></i> Sync Cloud</button>
                         </div>
                     </div>
 
