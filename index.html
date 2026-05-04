@@ -19,6 +19,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; overflow-x: hidden; user-select: none; -webkit-user-select: none; }
+        input, textarea { user-select: text; -webkit-user-select: text; }
         ::selection { background: #10b981; color: #fff; }
 
         /* Latar Belakang & Efek Visual Dasar */
@@ -349,32 +350,22 @@
 
     <div id="print-area"></div>
 
-    <!-- MODAL DATABASE SPREADSHEET & FIREBASE SETTINGS -->
+    <!-- MODAL DATABASE SPREADSHEET SETTINGS -->
     <div id="db-modal" class="hidden fixed inset-0 z-[500] flex items-center justify-center p-4 modal-backdrop bg-black/80 backdrop-blur-sm">
-        <div class="glass-effect bg-carbon w-full max-w-lg rounded-[40px] border p-8 shadow-2xl relative hologram-sweep-blue hud-card hud-blue max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div class="glass-effect bg-carbon w-full max-w-md rounded-[40px] border p-8 shadow-2xl relative hologram-sweep-blue hud-card hud-blue">
             <button onclick="closeDatabaseSettings()" class="absolute top-6 right-6 text-slate-500 hover:text-white bg-slate-800 p-2 rounded-full border border-slate-700 transition-all btn-interact">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
             <div class="w-16 h-16 bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-blue-500/50 cyber-cut">
                 <i data-lucide="database" class="w-8 h-8 text-blue-500"></i>
             </div>
-            <h3 class="text-xl font-black text-white uppercase italic text-center mb-6"><span class="text-blue-500/50 mr-2">[</span>Integrasi Cloud Database<span class="text-blue-500/50 ml-2">]</span></h3>
+            <h3 class="text-xl font-black text-white uppercase italic text-center mb-6"><span class="text-blue-500/50 mr-2">[</span>Integrasi Spreadsheet<span class="text-blue-500/50 ml-2">]</span></h3>
             
-            <div class="space-y-6">
-                <!-- Bagian Google Sheets -->
-                <div class="bg-[#020617]/50 p-5 rounded-3xl border border-slate-800">
-                    <p class="text-[10px] text-emerald-500 font-bold uppercase mb-3 tracking-widest flex items-center gap-2"><i data-lucide="table" class="w-4 h-4"></i> Google Apps Script</p>
-                    <input type="text" id="db-script-url" class="w-full bg-[#020617] border border-slate-700 p-4 rounded-xl text-white font-mono text-xs outline-none focus:border-emerald-500 mb-3" placeholder="https://script.google.com/macros/s/...">
-                    <button onclick="syncToGoogleSheets(true)" class="btn-interact cyber-cut w-full py-3.5 bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/20">Sync ke Spreadsheet</button>
-                </div>
-
-                <!-- Bagian Firebase -->
-                <div class="bg-[#020617]/50 p-5 rounded-3xl border border-slate-800">
-                    <p class="text-[10px] text-orange-500 font-bold uppercase mb-3 tracking-widest flex items-center gap-2"><i data-lucide="flame" class="w-4 h-4"></i> Firebase Firestore</p>
-                    <p class="text-[9px] text-slate-400 mb-3 font-mono leading-relaxed">Format JSON dibutuhkan (Buka Firebase Console > Project Settings > Web App config). Copy bagian JSON-nya saja.</p>
-                    <textarea id="fb-config-input" rows="4" class="w-full bg-[#020617] border border-slate-700 p-4 rounded-xl text-white font-mono text-[10px] outline-none focus:border-orange-500 mb-3 custom-scrollbar" placeholder='{&#10;  "apiKey": "AIzaSy...",&#10;  "authDomain": "...",&#10;  "projectId": "..."&#10;}'></textarea>
-                    <button onclick="syncToFirebase(true)" class="btn-interact cyber-cut w-full py-3.5 bg-orange-600 text-white font-black uppercase text-[10px] tracking-widest hover:bg-orange-500 transition shadow-lg shadow-orange-900/20">Sync ke Firebase</button>
-                </div>
+            <div class="bg-[#020617]/50 p-5 rounded-3xl border border-slate-800">
+                <p class="text-[10px] text-emerald-500 font-bold uppercase mb-3 tracking-widest flex items-center gap-2"><i data-lucide="table" class="w-4 h-4"></i> Google Apps Script URL</p>
+                <p class="text-[9px] text-slate-400 mb-4 font-mono leading-relaxed">Masukkan URL Web App dari Google Script Anda agar data dapat di-backup ke Google Sheets secara otomatis.</p>
+                <input type="text" id="db-script-url" class="w-full bg-[#020617] border border-slate-700 p-4 rounded-xl text-white font-mono text-xs outline-none focus:border-emerald-500 mb-4" placeholder="https://script.google.com/macros/s/...">
+                <button onclick="syncToGoogleSheets(true)" class="btn-interact cyber-cut w-full py-4 bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/20">Simpan & Sinkronkan</button>
             </div>
         </div>
     </div>
@@ -494,7 +485,6 @@
         // SISTEM DATABASE LOKAL (ANTI HILANG) & STATE
         // ==========================================
         let APPS_SCRIPT_URL = localStorage.getItem('ryokun_gs_url') || ''; 
-        let FIREBASE_CONFIG_STR = localStorage.getItem('ryokun_fb_config') || '';
         let inventory = JSON.parse(localStorage.getItem('ryo_inventory')) || [];
         let mutationLogs = JSON.parse(localStorage.getItem('ryo_logs')) || [];
         let users = JSON.parse(localStorage.getItem('ryo_users')) || [{ username: 'SUPERADMIN', password: '123', role: 'superadmin' }, { username: 'ADMIN', password: '123', role: 'admin' }];
@@ -522,112 +512,20 @@
             else sessionStorage.removeItem('ryokun_currentUser');
 
             updateNetworkUI();
-            if(navigator.onLine) {
-                let synced = false;
-                if(APPS_SCRIPT_URL) { await syncToGoogleSheets(false, false); synced = true; }
-                if(FIREBASE_CONFIG_STR) { await syncToFirebase(false); synced = true; }
-                
-                if (showSyncAlert) {
-                    if (synced) showAlert("DATA BERHASIL DISINKRONKAN KE CLOUD");
-                    else showAlert("DATA TERSIMPAN LOKAL (CLOUD BELUM DIATUR)");
-                }
+            if(navigator.onLine && APPS_SCRIPT_URL) {
+                await syncToGoogleSheets(false, showSyncAlert);
             } else if (showSyncAlert) {
-                showAlert("DATA BERHASIL DISIMPAN KE LOKAL (MODE OFFLINE)");
+                showAlert("DATA BERHASIL DISIMPAN KE LOKAL (MODE OFFLINE / CLOUD BELUM DIATUR)");
             }
         }
 
         // ==========================================
         // PEMBERSIHAN LAYAR SETELAH PRINT/CETAK
         // ==========================================
-        window.addEventListener('afterprint', () => {
-            const printArea = document.getElementById('print-area');
-            if(printArea) printArea.innerHTML = '';
-            window.dispatchEvent(new Event('resize')); 
-        });
-
-        // ==========================================
-        // INTERAKSI AI (J.A.R.V.I.S)
-        // ==========================================
-        window.triggerDroneMessage = function(msg, status = 'info') {
-            const drone = document.getElementById('drone-assistant'); 
-            const text = document.getElementById('drone-text'); 
-            const eye = document.getElementById('drone-eye');
-            const rings = document.querySelectorAll('.ai-ring');
-            if(!drone || !text) return;
-            
-            let color = 'rgba(6, 182, 212, 1)'; // cyan
-            let textClass = 'text-cyan-300 bg-cyan-950/95 border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.6)]';
-            let waveClass = 'bg-cyan-400 text-cyan-400';
-            
-            if(status === 'error') { 
-                color = 'rgba(239, 68, 68, 1)'; 
-                textClass = 'text-red-300 bg-red-950/95 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.6)]'; 
-                waveClass = 'bg-red-500 text-red-500';
-            }
-            else if(status === 'success') { 
-                color = 'rgba(16, 185, 129, 1)'; 
-                textClass = 'text-emerald-300 bg-emerald-950/95 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.6)]'; 
-                waveClass = 'bg-emerald-500 text-emerald-500';
-            }
-
-            if(drone.querySelector('.group')) {
-                drone.querySelector('.group').style.transform = 'scale(1.05)'; 
-                drone.querySelector('.group').style.borderColor = color;
-                drone.querySelector('.group').style.boxShadow = `0 10px 30px ${color.replace('1)', '0.5)')}`; 
-            }
-            
-            if(eye) {
-                eye.className = `w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-300 ai-core-active ${waveClass}`;
-                eye.style.boxShadow = `0 0 15px ${color}`;
-            }
-
-            rings.forEach(r => {
-                if (r.classList.contains('border-t-cyan-400')) {
-                   r.style.borderColor = color.replace('1)', '0.6)');
-                   r.style.borderBottomColor = 'transparent';
-                   r.style.borderLeftColor = 'transparent';
-                } else {
-                   r.style.borderColor = color.replace('1)', '0.4)');
-                }
-            });
-
-            text.className = `absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] md:text-[9px] font-black px-3 py-2 rounded-lg border opacity-0 transition-all duration-300 pointer-events-none transform scale-90 z-50 text-center w-[90%] whitespace-normal ${textClass}`;
-            text.innerText = msg; 
-            text.style.opacity = '1'; 
-            text.style.transform = 'translate(-50%, -50%) scale(1)';
-            
-            setTimeout(() => { 
-                if(drone.querySelector('.group')) {
-                    drone.querySelector('.group').style.transform = 'scale(1)'; 
-                    drone.querySelector('.group').style.borderColor = '';
-                    drone.querySelector('.group').style.boxShadow = '';
-                }
-                if(text) {
-                    text.style.opacity = '0'; 
-                    text.style.transform = 'translate(-50%, -50%) scale(0.9)'; 
-                }
-                if(navigator.onLine) {
-                    if(eye) {
-                        eye.className = 'w-6 h-6 bg-cyan-400 text-cyan-400 rounded-full flex items-center justify-center transition-colors duration-300 ai-core-active';
-                        eye.style.boxShadow = '';
-                    }
-                    rings.forEach(r => {
-                        r.style.borderColor = '';
-                        if (r.classList.contains('border-t-cyan-400')) {
-                            r.style.borderBottomColor = 'transparent';
-                            r.style.borderLeftColor = 'transparent';
-                        }
-                    });
-                }
-            }, 3000);
-        };
-
-        // ==========================================
-        // GOOGLE SHEETS & FIREBASE SYNC LOGIC
+        // GOOGLE SHEETS SYNC LOGIC
         // ==========================================
         function openDatabaseSettings() { 
             document.getElementById('db-script-url').value = APPS_SCRIPT_URL; 
-            document.getElementById('fb-config-input').value = FIREBASE_CONFIG_STR;
             document.getElementById('db-modal').classList.remove('hidden'); 
         }
         function closeDatabaseSettings() { document.getElementById('db-modal').classList.add('hidden'); }
@@ -679,74 +577,14 @@
                 });
                 
                 if(manual) { closeDatabaseSettings(); setTimeout(() => triggerDroneMessage("DATABASE CLOUD SYNC BERHASIL", "success"), 1000); }
+                if(showSyncAlert) { showAlert("DATA BERHASIL DISINKRONKAN KE SPREADSHEET!"); }
                 
                 setDBStatus('synced'); 
             } catch(e) { 
                 console.error(e);
                 setDBStatus('failed'); 
                 if(manual) triggerDroneMessage("GAGAL MENGHUBUNGI DATABASE CLOUD", "error");
-            }
-        }
-
-        window.syncToFirebase = async function(manual = false) {
-            if(manual) {
-                const configInput = document.getElementById('fb-config-input').value.trim();
-                if(configInput) {
-                    try {
-                        JSON.parse(configInput); // Verifikasi format JSON
-                        FIREBASE_CONFIG_STR = configInput;
-                        localStorage.setItem('ryokun_fb_config', configInput);
-                    } catch(e) {
-                        return showAlert("FORMAT JSON FIREBASE TIDAK VALID! Pastikan sesuai dengan format dari Firebase Console.");
-                    }
-                }
-            }
-
-            if(!FIREBASE_CONFIG_STR) {
-                if(manual) showAlert("Konfigurasi Firebase masih kosong.");
-                return;
-            }
-
-            if(!navigator.onLine) {
-                if(manual) showAlert("Koneksi Internet Terputus. Tidak dapat menyinkronkan ke Firebase saat ini.");
-                return;
-            }
-
-            if(manual) triggerDroneMessage("SINKRONISASI FIREBASE DIMULAI...", "info");
-
-            try {
-                const config = JSON.parse(FIREBASE_CONFIG_STR);
-                
-                // Dynamic Import Module Firebase SDK v11 agar kompatibel dengan tag script lama
-                const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
-                const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
-
-                // Mencegah inisiasi ganda Firebase jika ditekan berkali-kali
-                if(!window.firebaseAppInstance) {
-                    window.firebaseAppInstance = initializeApp(config);
-                    window.firebaseDbInstance = getFirestore(window.firebaseAppInstance);
-                }
-                const db = window.firebaseDbInstance;
-
-                // Push Data Utama ke Firestore (Overwrite dokumen)
-                await setDoc(doc(db, "SistemGudang_BPelopor", "Inventory"), { data: inventory, lastUpdated: new Date().toISOString() });
-                await setDoc(doc(db, "SistemGudang_BPelopor", "MutationLogs"), { data: mutationLogs, lastUpdated: new Date().toISOString() });
-                await setDoc(doc(db, "SistemGudang_BPelopor", "Settings"), { data: appSettings, lastUpdated: new Date().toISOString() });
-
-                if(manual) {
-                    closeDatabaseSettings();
-                    setTimeout(() => triggerDroneMessage("FIREBASE SYNC BERHASIL", "success"), 1000);
-                    showAlert("SINKRONISASI FIREBASE BERHASIL!");
-                }
-                setDBStatus('synced');
-
-            } catch (error) {
-                console.error("Firebase Sync Error:", error);
-                setDBStatus('failed');
-                if(manual) {
-                    triggerDroneMessage("GAGAL MENGHUBUNGI FIREBASE", "error");
-                    showAlert("GAGAL! Pastikan Project ID Firebase benar dan aturan Firestore diset 'Start in test mode' (allow read, write).");
-                }
+                if(showSyncAlert) { showAlert("SINKRONISASI ONLINE GAGAL."); }
             }
         }
 
