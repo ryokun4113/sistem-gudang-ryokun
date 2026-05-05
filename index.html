@@ -94,32 +94,32 @@
         @keyframes spin-reverse { 100% { transform: rotate(-360deg); } }
         
         @keyframes corePulse { 0% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 25px currentColor; } 100% { transform: scale(0.95); opacity: 0.8; } }
-        .ai-core-active { animation: corePulse 2s infinite ease-in-out; }
-        
-        .status-hud { background: rgba(2,6,23,0.8); border: 1px solid rgba(30,41,59,0.8); backdrop-filter: blur(8px); padding: 8px 12px; border-radius: 12px; display: flex; gap: 15px; align-items: center; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
-        
+        /* ========================================================= */
+        /* PERBAIKAN TOTAL PRINT LAYOUT (BARCODE A4 & TABEL LAPORAN) */
+        /* ========================================================= */
         #print-area { display: none; background: white; color: black; }
         
         @media print { 
             @page { margin: 5mm; size: A4 portrait; }
-            body { background: white; color: black; }
-            body * { visibility: hidden; } 
+            body, html { width: 100%; height: 100%; background: #fff !important; color: #000 !important; margin: 0; padding: 0; }
             
-            #print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+            /* Sembunyikan elemen utama aplikasi, tampilkan hanya container cetak */
+            body > * { display: none !important; }
+            #print-area { display: block !important; position: relative !important; width: 100% !important; left: 0; top: 0; margin: 0; padding: 0; }
             #print-area * { visibility: visible; color: black; } 
-            #app-sidebar, #mobile-header, #digital-clock, #connection-hud, main { display: none !important; }
             
-            .barcode-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; width: 100%; align-content: start; }
-            .barcode-label { border: 1.5px solid #000; border-radius: 3px; padding: 2mm; page-break-inside: avoid; display: flex; flex-direction: row; justify-content: space-between; align-items: center; height: 38mm; box-sizing: border-box; overflow: hidden; background: #fff; }
+            /* CSS LAYOUT BARCODE - Flexbox untuk tata letak sempurna Kertas A4 */
+            .barcode-container { display: flex; flex-wrap: wrap; gap: 2mm; width: 100%; align-content: flex-start; justify-content: flex-start; }
+            .barcode-label { width: calc(33.333% - 2mm); height: 38mm; border: 1.5px solid #000; border-radius: 4px; padding: 2mm; box-sizing: border-box; display: flex; flex-direction: row; justify-content: space-between; align-items: center; background: #fff; page-break-inside: avoid; break-inside: avoid; margin-bottom: 2mm; }
             .bl-left { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-right: 2mm; overflow: hidden; }
             .bl-right { display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1px dashed #666; padding-left: 2mm; width: 22mm; flex-shrink: 0; }
             .bl-title { font-size: 7pt; font-weight: 900; margin-bottom: 1mm; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
             .bl-sku { font-size: 6pt; font-family: monospace; font-weight: bold; margin-top: 1mm; }
             .bl-qr-title { font-size: 4.5pt; font-weight: bold; text-align: center; margin-bottom: 1mm; }
             .bl-qr-box { width: 100%; display: flex; justify-content: center; }
-            .bl-qr-box img, .bl-qr-box canvas { max-width: 18mm !important; height: auto !important; }
+            .bl-qr-box img, .bl-qr-box canvas { max-width: 16mm !important; height: auto !important; }
 
+            /* CSS TABEL LAPORAN PROFESIONAL */
             .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9pt; color: #000; }
             .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: left; }
             .print-table th { background-color: #f0f0f0 !important; font-weight: bold; text-align: center; -webkit-print-color-adjust: exact; }
@@ -176,6 +176,11 @@
         <div class="w-px h-4 bg-slate-700 mx-1"></div>
         <button onclick="pullFromCloud(true, false)" class="btn-interact text-blue-400 hover:text-white" title="Tarik Data Terbaru dari Cloud">
             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+        <div class="w-px h-4 bg-slate-700 mx-1"></div>
+        <button onclick="toggleVoice()" class="btn-interact text-cyan-400 hover:text-white relative group" title="Aktifkan Kontrol Suara J.A.R.V.I.S">
+            <i data-lucide="mic" class="w-4 h-4 group-hover:animate-pulse"></i>
+            <span class="absolute -bottom-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden" id="mic-indicator"></span>
         </button>
     </div>
 
@@ -645,9 +650,51 @@
                 initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination);
                 if(type === 'IN') { osc.type='sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.15); } 
                 else if(type === 'OUT') { osc.type='sine'; osc.frequency.setValueAtTime(500, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.2); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2); } 
+                else if(type === 'HOVER') { osc.type='square'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime); gain.gain.setValueAtTime(0.005, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.02); } // Efek suara mekanis ringan
                 else { osc.type='sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
             } catch (e) {}
         }
+        
+        // --- FITUR BARU: J.A.R.V.I.S VOICE COMMAND ---
+        let recognition;
+        function initVoiceCommand() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'id-ID';
+                recognition.continuous = false;
+                recognition.onstart = function() { document.getElementById('mic-indicator').classList.remove('hidden'); };
+                recognition.onend = function() { document.getElementById('mic-indicator').classList.add('hidden'); };
+                recognition.onresult = function(event) {
+                    const command = event.results[0][0].transcript.toLowerCase();
+                    if(typeof triggerDroneMessage === 'function') triggerDroneMessage("PERINTAH SUARA: " + command.toUpperCase(), "info");
+                    
+                    if(command.includes('dashboard') || command.includes('beranda') || command.includes('utama')) switchTab('dashboard');
+                    else if(command.includes('scan') || command.includes('kamera') || command.includes('pindai')) switchTab('scanner');
+                    else if(command.includes('inventaris') || command.includes('data') || command.includes('aset')) switchTab('inventory');
+                    else if(command.includes('tambah') || command.includes('registrasi') || command.includes('baru')) switchTab('add');
+                    else if(command.includes('opname') || command.includes('audit')) switchTab('opname');
+                    else if(command.includes('kinerja') || command.includes('papan') || command.includes('admin')) switchTab('leaderboard');
+                    else if(command.includes('keluar') || command.includes('logout')) logout();
+                    else { speakText("Perintah suara tidak dipahami sistem."); }
+                };
+            }
+        }
+        function toggleVoice() {
+            if(recognition) {
+                try { recognition.start(); playBeep('IN'); speakText("Sistem siap. Ucapkan perintah."); } catch(e){}
+            } else {
+                showAlert("Browser perangkat Anda tidak mendukung fitur Voice Command.");
+            }
+        }
+
+        // --- FITUR BARU: HOVER SFX ---
+        document.addEventListener('mouseover', (e) => {
+            if (e.target.closest('.btn-interact') || e.target.closest('.sidebar-item') || e.target.closest('.card-hover') || e.target.tagName === 'BUTTON') {
+                playBeep('HOVER');
+            }
+        });
+
         let inactivityTimeout; const INACTIVITY_TIME_LIMIT = 2 * 60 * 60 * 1000; 
         function resetAutoLogout() { clearTimeout(inactivityTimeout); if (currentUser) { inactivityTimeout = setTimeout(() => { logout(); alert("Sesi berakhir otomatis."); }, INACTIVITY_TIME_LIMIT); } }
         function setupActivityListeners() { ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll'].forEach(evt => { document.addEventListener(evt, resetAutoLogout, { passive: true }); }); }
@@ -1096,24 +1143,35 @@
             items.forEach((item, index) => {
                 html += `
                     <div class="barcode-label">
-                        <div class="bl-left"><div class="bl-title">${item.name}</div><svg id="print-barcode-${index}" style="width: 100%;"></svg><div class="bl-sku">${item.id}</div></div>
+                        <div class="bl-left"><div class="bl-title">${item.name}</div><svg id="print-barcode-${index}"></svg><div class="bl-sku">${item.id}</div></div>
                         <div class="bl-right"><div class="bl-qr-title">MICRO-LOG</div><div class="bl-qr-box" id="print-qr-${index}"></div></div>
                     </div>`;
             });
             html += '</div>'; printArea.innerHTML = html;
             
             items.forEach((item, index) => {
-                try { JsBarcode(`#print-barcode-${index}`, item.id, { format: "CODE128", width: 1.5, height: 25, displayValue: false, margin: 0 }); } catch(e) {}
+                try { JsBarcode(`#print-barcode-${index}`, item.id, { format: "CODE128", width: 1.5, height: 25, displayValue: false, margin: 0 }); } catch(e) { console.error("Barcode Error:", e); }
                 const itemLogs = mutationLogs.filter(log => log.id === item.id); const lastLog = itemLogs[0]; const lastDate = lastLog ? `${lastLog.fullDate} ${lastLog.time}` : item.date; const op = lastLog ? lastLog.operator : 'SYS';
                 const logbookText = `ID:${item.id}\nNMA:${item.name}\nSN:${item.serial}\nSTS:${item.status}\nHLD:${item.holder}\nUPD:${lastDate}\nOP:${op}`;
-                try { const qrContainer = document.getElementById(`print-qr-${index}`); new QRCode(qrContainer, { text: logbookText, width: 64, height: 64, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L }); } catch(e) {}
+                try { const qrContainer = document.getElementById(`print-qr-${index}`); new QRCode(qrContainer, { text: logbookText, width: 64, height: 64, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L }); } catch(e) { console.error("QR Error:", e); }
             });
             setTimeout(() => { window.print(); }, 800);
         }
 
         window.toggleSelectAll = function() { const isChecked = document.getElementById('selectAllCheckbox').checked; document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = isChecked); }
-        window.printSelectedBarcodes = function() { const checkboxes = document.querySelectorAll('.item-checkbox:checked'); if(checkboxes.length === 0) return showAlert("PILIH MINIMAL SATU ASET UNTUK DICETAK MASSAL!"); const selectedItems = Array.from(checkboxes).map(cb => inventory.find(i => i.id === cb.value)); printMultipleBarcodes(selectedItems); }
-        window.printSingleBarcode = function(code) { const item = inventory.find(i => i.id === code) || {id: code, name: 'ASET BARU', serial: '-', popor: '-', status: 'PREVIEW', holder: '-', date: new Date().toLocaleDateString('id-ID')}; printMultipleBarcodes([item]); }
+        
+        window.printSelectedBarcodes = function() { 
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked'); 
+            if(checkboxes.length === 0) return showAlert("PILIH MINIMAL SATU ASET UNTUK DICETAK MASSAL!"); 
+            
+            // Konversi ID ke String dan Filter Data undefined untuk mencegah crash sistem
+            const selectedItems = Array.from(checkboxes).map(cb => inventory.find(i => String(i.id) === String(cb.value))).filter(Boolean); 
+            
+            if(selectedItems.length === 0) return showAlert("GAGAL MEMUAT DATA ASET UNTUK DICETAK!");
+            printMultipleBarcodes(selectedItems); 
+        }
+        
+        window.printSingleBarcode = function(code) { const item = inventory.find(i => String(i.id) === String(code)) || {id: code, name: 'ASET BARU', serial: '-', popor: '-', status: 'PREVIEW', holder: '-', date: new Date().toLocaleDateString('id-ID')}; printMultipleBarcodes([item]); }
         
         window.printAllInventory = function() {
             const printArea = document.getElementById('print-area'); const nowStr = new Date().toLocaleDateString('id-ID'); const sortedInventory = getSortedInventory();
@@ -1551,7 +1609,7 @@
         }
 
         window.onload = () => {
-            lucide.createIcons(); startClock(); setupActivityListeners(); updateNetworkUI(); startAIMonitoring(); initMatrixRain();
+            lucide.createIcons(); startClock(); setupActivityListeners(); updateNetworkUI(); startAIMonitoring(); initMatrixRain(); initVoiceCommand();
             if(currentUser) { showApp(); } else { runBootSequence(); }
         };
     </script>
