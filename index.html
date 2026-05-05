@@ -478,8 +478,14 @@
                         showAlert("SINKRONISASI BERHASIL!\nData lokal telah diperbarui sesuai dengan versi Google Sheets terbaru.");
                         if(currentActiveTab) switchTab(currentActiveTab);
                     } else if (silent && isChanged) {
-                        // Jika ada perubahan dari perangkat lain, re-render tab jika user sedang melihatnya
-                        if(['dashboard', 'inventory', 'leaderboard', 'scanner'].includes(currentActiveTab)) {
+                        // PERBAIKAN: Cek apakah user sedang membuka form/modal penting
+                        const isModalOpen = !document.getElementById('edit-modal').classList.contains('hidden') || 
+                                            !document.getElementById('admin-modal').classList.contains('hidden') ||
+                                            !document.getElementById('detail-modal').classList.contains('hidden') ||
+                                            !document.getElementById('password-modal').classList.contains('hidden');
+
+                        // Jika ada perubahan dari perangkat lain, re-render tab JIKA tidak ada modal terbuka (agar ketikan tidak hilang)
+                        if(!isModalOpen && ['dashboard', 'inventory', 'leaderboard', 'scanner'].includes(currentActiveTab)) {
                             switchTab(currentActiveTab);
                         }
                         if(typeof triggerDroneMessage === 'function') triggerDroneMessage("UPDATE: DATA BARU DITERIMA DARI CLOUD", "success");
