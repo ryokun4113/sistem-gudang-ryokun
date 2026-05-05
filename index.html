@@ -457,10 +457,23 @@
 
         let inventory = safeJSONParse('ryo_inventory', []);
         let mutationLogs = safeJSONParse('ryo_logs', []);
-        let users = safeJSONParse('ryo_users', [{ username: 'SUPERADMIN', password: '123', role: 'superadmin' }, { username: 'ADMIN', password: '123', role: 'admin' }]);
+        let users = safeJSONParse('ryo_users', [{ username: 'RYO KUN', password: '123', role: 'superadmin' }, { username: 'ADMIN', password: '123', role: 'admin' }]);
+        
+        // Auto-migrasi SUPERADMIN lama menjadi RYO KUN (Jika sudah terlanjur tersimpan di perangkat)
+        let oldSAIndex = users.findIndex(u => u.username === 'SUPERADMIN');
+        if(oldSAIndex !== -1) { 
+            users[oldSAIndex].username = 'RYO KUN'; 
+            localStorage.setItem('ryo_users', JSON.stringify(users)); 
+        }
+
         let appSettings = safeJSONParse('ryo_settings', { overdueLimitHours: 24, categories: ['Senjata Api', 'Senjata Pelontar', 'Amunisi', 'Perlengkapan Taktis'] });
 
         let currentUser = sessionStorage.getItem('ryokun_currentUser') ? JSON.parse(sessionStorage.getItem('ryokun_currentUser')) : null;
+        if (currentUser && currentUser.username === 'SUPERADMIN') {
+            currentUser.username = 'RYO KUN';
+            sessionStorage.setItem('ryokun_currentUser', JSON.stringify(currentUser));
+        }
+
         let currentActiveTab = ''; 
         let isRapidScanMode = false; 
         let chartActivity = null; let chartTopItems = null;
@@ -1483,7 +1496,7 @@
                                         <tr class="hover:bg-slate-800/50 transition-colors">
                                             <td class="p-4 md:p-5 font-black text-white uppercase tracking-widest flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-slate-800 flex justify-center items-center text-emerald-500 text-xs">${u.username.charAt(0)}</div> ${u.username}</td>
                                             <td class="p-4 md:p-5 text-center"><span class="bg-emerald-950/50 border border-emerald-900/50 text-emerald-400 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-inner">${u.role}</span></td>
-                                            <td class="p-4 md:p-5 text-right">${u.username !== 'SUPERADMIN' ? `<button onclick="deleteAdmin('${u.username}')" class="btn-interact text-slate-400 hover:text-red-500 bg-[#020617] p-3 rounded-xl border border-slate-800 hover:border-red-500 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '<span class="text-[9px] text-slate-600 font-bold uppercase mr-4">LOCKED</span>'}</td>
+                                            <td class="p-4 md:p-5 text-right">${u.username !== 'RYO KUN' ? `<button onclick="deleteAdmin('${u.username}')" class="btn-interact text-slate-400 hover:text-red-500 bg-[#020617] p-3 rounded-xl border border-slate-800 hover:border-red-500 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '<span class="text-[9px] text-slate-600 font-bold uppercase mr-4">LOCKED</span>'}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -1503,7 +1516,7 @@
         }
 
         window.deleteAdmin = function(u) {
-            if(u === 'SUPERADMIN') return; users = users.filter(x => x.username !== u); save(true); renderUsersManagement(); showAlert(`AKUN [${u}] BERHASIL DIHAPUS DARI SISTEM.`);
+            if(u === 'RYO KUN') return; users = users.filter(x => x.username !== u); save(true); renderUsersManagement(); showAlert(`AKUN [${u}] BERHASIL DIHAPUS DARI SISTEM.`);
         }
 
         window.switchTab = function(tabId) {
