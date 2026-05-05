@@ -448,7 +448,13 @@
         }
 
         // STATE DATABASE LOKAL
-        let APPS_SCRIPT_URL = localStorage.getItem('ryokun_gs_url') || ''; 
+        let APPS_SCRIPT_URL = localStorage.getItem('ryokun_gs_url'); 
+        if (!APPS_SCRIPT_URL) {
+            // URL Default Otomatis dimasukkan jika belum ada yang disimpan
+            APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTgTsHmJoXgNv8Nvqh8m7I5vDgGQWqtYccnLXL7X9AidxuX4kqRVxHokjyAw8ZPMz0/exec';
+            localStorage.setItem('ryokun_gs_url', APPS_SCRIPT_URL);
+        }
+
         let inventory = safeJSONParse('ryo_inventory', []);
         let mutationLogs = safeJSONParse('ryo_logs', []);
         let users = safeJSONParse('ryo_users', [{ username: 'SUPERADMIN', password: '123', role: 'superadmin' }, { username: 'ADMIN', password: '123', role: 'admin' }]);
