@@ -15,6 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
@@ -542,7 +543,7 @@
         }
 
         // ==========================================
-        // GOOGLE SHEETS SYNC LOGIC (FIXED)
+        // GOOGLE SHEETS SYNC LOGIC
         // ==========================================
         function openDatabaseSettings() { 
             document.getElementById('db-script-url').value = APPS_SCRIPT_URL; 
@@ -595,7 +596,7 @@
             try {
                 await fetch(APPS_SCRIPT_URL, { 
                     method: 'POST', 
-                    mode: 'no-cors', // POST ke G.Script dari Frontend butuh no-cors
+                    mode: 'no-cors', 
                     headers: { 'Content-Type': 'text/plain' }, 
                     body: JSON.stringify({ action: 'sync', inventory: inventory, logs: mutationLogs }) 
                 });
@@ -735,10 +736,9 @@
         }
 
         // ==========================================
-        // MODAL HANDLERS (EDIT, DELETE, DETAILS) - FIXED!
+        // MODAL HANDLERS
         // ==========================================
         
-        // 1. DETAIL MODAL
         window.openDetailModal = function(id) {
             const item = inventory.find(i => i.id === id);
             if(!item) return;
@@ -759,11 +759,10 @@
         };
         window.closeDetailModal = function() { document.getElementById('detail-modal').classList.add('hidden'); };
 
-        // 2. EDIT MODAL
         window.openEditModal = function(id) {
             const item = inventory.find(i => i.id === id);
             if(!item) return;
-            itemToEdit = id; // Simpan ID aset yang sedang diedit
+            itemToEdit = id; 
             document.getElementById('edit-name').value = item.name;
             document.getElementById('edit-category').value = item.category;
             document.getElementById('edit-serial').value = item.serial;
@@ -779,7 +778,6 @@
             const itemIndex = inventory.findIndex(i => i.id === itemToEdit);
             
             if(itemIndex > -1) {
-                // Update Value
                 inventory[itemIndex].name = document.getElementById('edit-name').value.toUpperCase().trim();
                 inventory[itemIndex].category = document.getElementById('edit-category').value.toUpperCase().trim();
                 inventory[itemIndex].serial = document.getElementById('edit-serial').value.toUpperCase().trim();
@@ -787,7 +785,6 @@
                 inventory[itemIndex].holder = document.getElementById('edit-holder').value.toUpperCase().trim();
                 inventory[itemIndex].note = document.getElementById('edit-note').value.toUpperCase().trim();
                 
-                // Masukkan ke Log Audit
                 mutationLogs.unshift({ 
                     id: inventory[itemIndex].id, 
                     name: inventory[itemIndex].name, 
@@ -807,7 +804,6 @@
             }
         };
 
-        // 3. ADMIN (DELETE) MODAL
         window.openAdminModal = function(id) {
             itemToDelete = id;
             document.getElementById('admin-name-input').value = '';
@@ -822,7 +818,6 @@
             
             const item = inventory.find(i => i.id === itemToDelete);
             if(item) {
-                // Masukkan ke log Audit Penghapusan
                 mutationLogs.unshift({ 
                     id: item.id, 
                     name: item.name, 
@@ -835,7 +830,6 @@
                     timestamp: Date.now() 
                 });
                 
-                // Hapus item dari array inventory
                 inventory = inventory.filter(i => i.id !== itemToDelete);
                 
                 save(false);
@@ -1071,7 +1065,6 @@
                 </div>
             `;
             
-            // Check for Lockdown Mode
             if (overdueItems.length >= 3) {
                 document.body.classList.add('lockdown-mode');
                 if(!window.lockdownAlerted) {
@@ -1141,31 +1134,43 @@
                 <div class="content-section max-w-2xl mx-auto py-6 md:py-10" id="scanner-wrapper">
                     <div class="text-center mb-6">
                         <div class="w-16 h-16 md:w-20 md:h-20 bg-emerald-600/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-emerald-600/20 animate-pulse cyber-cut"><i data-lucide="scan" class="w-8 h-8 md:w-10 md:h-10 text-emerald-500"></i></div>
-                        <p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">[ SIAP MENERIMA INPUT SCANNER HARDWARE ]</p>
+                        <p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">[ SIAP MENERIMA INPUT SCANNER HARDWARE & MANUAL ]</p>
                     </div>
                     
                     <div id="scanner-crt-wrapper" class="glass-effect rounded-[30px] border border-slate-700 p-2 focus-within:border-emerald-500 transition-all relative overflow-hidden shadow-2xl bg-[#020617]">
                         <div class="absolute inset-0 bg-[rgba(16,185,129,0.02)] pointer-events-none"></div>
                         <div class="crt-scanline absolute inset-0 pointer-events-none opacity-50 z-10"></div>
-                        <input type="text" id="scan-input" autocomplete="off" class="w-full bg-[#020617] p-6 md:p-8 rounded-[24px] text-2xl md:text-3xl font-mono font-bold text-emerald-400 outline-none text-center uppercase tracking-widest placeholder-emerald-900/50 caret-emerald-400 shadow-[inset_0_0_20px_rgba(16,185,129,0.1)] relative z-20" placeholder="[ SYS.SCAN_READY ]">
+                        <input type="text" id="scan-input" autocomplete="off" onkeydown="if(event.key === 'Enter') { window.handleScan(this.value); this.value=''; }" class="w-full bg-[#020617] p-6 md:p-8 rounded-[24px] text-lg md:text-3xl font-mono font-bold text-emerald-400 outline-none text-center uppercase tracking-widest placeholder-emerald-900/50 caret-emerald-400 shadow-[inset_0_0_20px_rgba(16,185,129,0.1)] relative z-20" placeholder="KETIK / SCAN BARCODE DISINI">
                     </div>
 
-                    <div class="flex items-center justify-center mt-6 gap-3">
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="rapid-scan-toggle" class="sr-only peer" onchange="toggleRapidScan(this.checked)" ${isRapidScanMode ? 'checked' : ''}>
-                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                        </label>
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mode Pemindaian Kilat (Rapid Scan)</span>
+                    <div class="flex flex-col md:flex-row items-center justify-center mt-6 gap-4">
+                        <div class="flex items-center gap-3">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="rapid-scan-toggle" class="sr-only peer" onchange="toggleRapidScan(this.checked)" ${isRapidScanMode ? 'checked' : ''}>
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rapid Scan</span>
+                        </div>
+                        <button onclick="toggleMobileCamera()" class="btn-interact flex items-center gap-2 bg-emerald-900/40 border border-emerald-500/50 text-emerald-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all"><i data-lucide="camera" class="w-4 h-4"></i> Scan Kamera Perangkat</button>
+                    </div>
+
+                    <div id="camera-reader-container" class="hidden mt-6 bg-[#020617] border-2 border-emerald-500/50 rounded-2xl overflow-hidden p-2">
+                        <div id="reader" width="100%"></div>
+                        <button onclick="stopMobileCamera()" class="w-full mt-2 bg-red-900/50 text-red-500 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition border border-red-500/50">Tutup Kamera</button>
                     </div>
                     
-                    <div id="scan-feedback" class="mt-6 hidden p-4 md:p-6 rounded-[24px] border-2 flex items-center gap-4 md:gap-6 transform transition-all duration-300 bg-carbon hud-card">
+                    <div id="scan-feedback" class="mt-6 hidden p-4 md:p-6 rounded-[24px] border-2 flex flex-col md:flex-row items-center gap-4 transform transition-all duration-300 bg-carbon hud-card">
                         <div id="feedback-icon" class="w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shrink-0 cyber-cut"></div>
-                        <div class="text-left flex-1"><p id="feedback-title" class="text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-1"></p><h4 id="feedback-desc" class="font-black text-base md:text-xl uppercase leading-tight drop-shadow-[0_0_5px_currentColor]"></h4></div>
+                        <div class="text-center md:text-left flex-1 w-full overflow-hidden">
+                            <p id="feedback-title" class="text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-1 truncate"></p>
+                            <h4 id="feedback-desc" class="font-black text-sm md:text-xl uppercase leading-tight drop-shadow-[0_0_5px_currentColor] truncate w-full"></h4>
+                        </div>
                     </div>
+                    
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 mt-8">
                         <div class="xl:col-span-2 bg-[#1e293b] border border-slate-800 rounded-[30px] overflow-hidden shadow-xl flex flex-col h-[350px] md:h-[450px]">
                             <div class="bg-[#020617] p-4 md:p-5 border-b border-slate-800 flex justify-between items-center shrink-0 gap-4">
-                                <div class="flex items-center gap-2 flex-1"><i data-lucide="calendar" class="w-4 h-4 text-emerald-500 shrink-0"></i><input type="text" id="session-name-input" class="bg-transparent text-[10px] md:text-[11px] font-black text-emerald-500 uppercase tracking-widest outline-none w-full placeholder-emerald-900/50 border-b border-dashed border-emerald-900/50 focus:border-emerald-500 transition-colors py-1 caret-emerald-500" placeholder="KETIK NAMA SESI MUTASI (OPSIONAL)..." value="${currentSessionName || ''}" oninput="updateSessionName(this.value)"></div>
+                                <div class="flex items-center gap-2 flex-1"><i data-lucide="calendar" class="w-4 h-4 text-emerald-500 shrink-0"></i><input type="text" id="session-name-input" class="bg-transparent text-[10px] md:text-[11px] font-black text-emerald-500 uppercase tracking-widest outline-none w-full placeholder-emerald-900/50 border-b border-dashed border-emerald-900/50 focus:border-emerald-500 transition-colors py-1 caret-emerald-500" placeholder="KETIK NAMA SESI MUTASI..." value="${currentSessionName || ''}" oninput="updateSessionName(this.value)"></div>
                                 <button onclick="printScannerLog('today')" class="btn-interact text-slate-400 hover:text-emerald-500 transition-colors bg-slate-800 p-2 rounded-lg border border-slate-700 shrink-0" title="Cetak Log Hari Ini"><i data-lucide="printer" class="w-4 h-4"></i></button>
                             </div>
                             <div id="log-today" class="divide-y divide-slate-800/50 overflow-y-auto custom-scrollbar flex-1 bg-carbon bg-cyber-mesh"></div>
@@ -1180,17 +1185,17 @@
                     </div>
                 </div>
             `;
-            const input = document.getElementById('scan-input');
-            input.addEventListener('blur', (e) => { if (isRapidScanMode && currentActiveTab === 'scanner') { setTimeout(() => { const activeTag = document.activeElement ? document.activeElement.tagName : ''; if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') e.target.focus(); }, 10); } });
             if (isRapidScanMode) document.getElementById('scanner-crt-wrapper').classList.add('rapid-pulse');
-            if(window.innerWidth >= 768) setTimeout(() => input.focus(), 100);
-            input.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleScan(input.value.toUpperCase().trim()); });
+            setTimeout(() => { const input = document.getElementById('scan-input'); if(input && window.innerWidth >= 768) input.focus(); }, 100);
             updateMiniLog(); lucide.createIcons();
         }
 
-        window.handleScan = function(code) {
-            if(!code) return; initAudio(); 
-            const item = inventory.find(i => i.id === code);
+        window.handleScan = function(rawCode) {
+            if(!rawCode) return; initAudio(); 
+            
+            const code = String(rawCode).replace(/\s+/g, '').toUpperCase().trim();
+            const item = inventory.find(i => String(i.id).replace(/\s+/g, '').toUpperCase() === code);
+            
             const feedback = document.getElementById('scan-feedback'); const iconBox = document.getElementById('feedback-icon'); const fTitle = document.getElementById('feedback-title'); const fDesc = document.getElementById('feedback-desc'); const mainContent = document.querySelector('main'); const scanInput = document.getElementById('scan-input');
             
             if(!isRapidScanMode) feedback.classList.remove('hidden');
@@ -1202,41 +1207,64 @@
                 
                 save(); 
                 let ttsText = `${item.name}. `;
-                if (isMasuk) {
-                    ttsText += "Masuk ke gudang.";
-                } else {
-                    ttsText += (item.holder && item.holder !== '-') ? `Keluar. Atas nama, ${item.holder}.` : "Keluar.";
-                }
+                if (isMasuk) { ttsText += "Masuk ke gudang."; } else { ttsText += (item.holder && item.holder !== '-') ? `Keluar. Atas nama, ${item.holder}.` : "Keluar."; }
                 speakText(ttsText);
                 
                 if (isRapidScanMode) {
                     mainContent.classList.add(isMasuk ? 'flash-in' : 'flash-out'); playBeep(isMasuk ? 'IN' : 'OUT');
                 } else {
                     if(isMasuk) {
-                        feedback.className = "mt-6 p-4 md:p-6 rounded-[24px] border-emerald-600 bg-emerald-950/30 border-2 flex items-center gap-4 md:gap-6 animate-in fade-in zoom-in duration-300 bg-carbon hud-card";
+                        feedback.className = "mt-6 p-4 md:p-6 rounded-[24px] border-emerald-600 bg-emerald-950/30 border-2 flex items-center gap-4 md:gap-6 animate-in fade-in zoom-in duration-300 bg-carbon hud-card w-full";
                         iconBox.className = "w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-900/50 cyber-cut"; iconBox.innerHTML = `<i data-lucide="arrow-down-to-line" class="w-6 h-6 md:w-8 md:h-8 text-white"></i>`;
                         fTitle.className = "text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1"; fTitle.innerText = "MUTASI MASUK (IN)";
-                        fDesc.className = "font-black text-base md:text-xl text-emerald-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor]"; mainContent.classList.add('flash-in'); playBeep('IN');
+                        fDesc.className = "font-black text-sm md:text-xl text-emerald-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor]"; mainContent.classList.add('flash-in'); playBeep('IN');
                     } else {
-                        feedback.className = "mt-6 p-4 md:p-6 rounded-[24px] border-orange-500 bg-orange-950/30 border-2 flex items-center gap-4 md:gap-6 animate-in fade-in zoom-in duration-300 bg-carbon hud-card hud-orange";
+                        feedback.className = "mt-6 p-4 md:p-6 rounded-[24px] border-orange-500 bg-orange-950/30 border-2 flex items-center gap-4 md:gap-6 animate-in fade-in zoom-in duration-300 bg-carbon hud-card hud-orange w-full";
                         iconBox.className = "w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-orange-900/50 cyber-cut"; iconBox.innerHTML = `<i data-lucide="arrow-up-from-line" class="w-6 h-6 md:w-8 md:h-8 text-white"></i>`;
                         fTitle.className = "text-[9px] md:text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1"; fTitle.innerText = "MUTASI KELUAR (OUT)";
-                        fDesc.className = "font-black text-base md:text-xl text-orange-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor]"; mainContent.classList.add('flash-out'); playBeep('OUT');
+                        fDesc.className = "font-black text-sm md:text-xl text-orange-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor]"; mainContent.classList.add('flash-out'); playBeep('OUT');
                     }
                     fDesc.innerText = item.name;
                 }
             } else {
                 speakText("Peringatan! Kode Barcode tidak dikenal!");
                 if (isRapidScanMode) { mainContent.classList.add('flash-err'); playBeep('ERROR'); } else {
-                    feedback.className = "mt-6 p-4 md:p-6 rounded-[24px] border-red-600 bg-red-950/30 border-2 flex items-center gap-4 md:gap-6 animate-in fade-in zoom-in duration-300 bg-carbon hud-card hud-red";
+                    feedback.className = "mt-6 p-4 md:p-6 rounded-[24px] border-red-600 bg-red-950/30 border-2 flex items-center gap-4 md:gap-6 animate-in fade-in zoom-in duration-300 bg-carbon hud-card hud-red w-full";
                     iconBox.className = "w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-red-600 flex items-center justify-center shrink-0 shadow-lg shadow-red-900/50 cyber-cut"; iconBox.innerHTML = `<i data-lucide="x-circle" class="w-6 h-6 md:w-8 md:h-8 text-white"></i>`;
                     fTitle.className = "text-[9px] md:text-[10px] font-black text-red-500 uppercase tracking-widest mb-1"; fTitle.innerText = "ERROR / TIDAK DITEMUKAN";
-                    fDesc.className = "font-black text-base md:text-xl text-red-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor]"; fDesc.innerText = `KODE [${code}]`;
+                    fDesc.className = "font-black text-sm md:text-xl text-red-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor] truncate"; fDesc.innerText = `KODE [${code}]`;
                     mainContent.classList.add('flash-err'); playBeep('ERROR');
                 }
             }
-            if (scanInput) { scanInput.value = ''; scanInput.focus(); } 
+            if (scanInput) { scanInput.value = ''; if(window.innerWidth >= 768) scanInput.focus(); } 
             lucide.createIcons(); updateMiniLog();
+        }
+
+        let html5QrcodeScanner = null;
+        window.toggleMobileCamera = function() {
+            const container = document.getElementById('camera-reader-container');
+            if(container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                if(!html5QrcodeScanner) {
+                    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+                }
+                html5QrcodeScanner.render((decodedText, decodedResult) => {
+                    playBeep('IN');
+                    window.handleScan(decodedText);
+                    stopMobileCamera(); 
+                }, (error) => {  });
+            } else {
+                stopMobileCamera();
+            }
+        }
+        
+        window.stopMobileCamera = function() {
+            const container = document.getElementById('camera-reader-container');
+            container.classList.add('hidden');
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.clear().catch(err => console.error(err));
+                html5QrcodeScanner = null;
+            }
         }
 
         window.updateMiniLog = function() {
@@ -1356,9 +1384,9 @@
                 let addedCount = 0; const now = new Date();
                 rows.forEach(row => {
                     const sku = row["SKU/Barcode"] || row["SKU"] || row["id"]; if(!sku) return;
-                    const existing = inventory.find(i => i.id === String(sku).toUpperCase());
+                    const existing = inventory.find(i => String(i.id).replace(/\s+/g, '').toUpperCase() === String(sku).replace(/\s+/g, '').toUpperCase());
                     if(!existing) {
-                        const newItem = { id: String(sku).toUpperCase(), name: String(row["Nama Aset"] || row["name"] || "ASET BARU IMPORT").toUpperCase(), category: String(row["Kategori"] || row["category"] || "-").toUpperCase(), serial: String(row["Nomor Seri"] || row["serial"] || "-").toUpperCase(), popor: String(row["Nomor Popor"] || row["popor"] || "-").toUpperCase(), holder: String(row["Pemegang"] || row["holder"] || "-").toUpperCase(), note: String(row["Keterangan"] || row["note"] || "-").toUpperCase(), status: row["Status"] === "Keluar" ? "Keluar" : "Di Gudang", date: row["Tanggal Registrasi"] || row["date"] || now.toISOString().split('T')[0] };
+                        const newItem = { id: String(sku).replace(/\s+/g, '').toUpperCase(), name: String(row["Nama Aset"] || row["name"] || "ASET BARU IMPORT").toUpperCase(), category: String(row["Kategori"] || row["category"] || "-").toUpperCase(), serial: String(row["Nomor Seri"] || row["serial"] || "-").toUpperCase(), popor: String(row["Nomor Popor"] || row["popor"] || "-").toUpperCase(), holder: String(row["Pemegang"] || row["holder"] || "-").toUpperCase(), note: String(row["Keterangan"] || row["note"] || "-").toUpperCase(), status: row["Status"] === "Keluar" ? "Keluar" : "Di Gudang", date: row["Tanggal Registrasi"] || row["date"] || now.toISOString().split('T')[0] };
                         inventory.push(newItem);
                         mutationLogs.unshift({ id: newItem.id, name: newItem.name, status: newItem.status === "Di Gudang" ? "BARU (IMPORT)" : "IMPORT KELUAR", type: 'ADD', holder: newItem.holder, time: now.toLocaleTimeString('id-ID'), fullDate: now.toLocaleDateString('id-ID'), operator: currentUser ? currentUser.username : "SYSTEM IMPORT", timestamp: Date.now() });
                         addedCount++;
@@ -1583,8 +1611,8 @@
             renderOpname();
         }
 
-        window.handleOpnameScan = function(code) {
-            code = code.toUpperCase().trim();
+        window.handleOpnameScan = function(rawCode) {
+            const code = String(rawCode).replace(/\s+/g, '').toUpperCase().trim();
             if(!code) return;
             const input = document.getElementById('opname-scan-input');
             if(input) { input.value = ''; input.focus(); }
@@ -1712,10 +1740,9 @@
             document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active', 'bg-slate-800/50', 'text-white'));
             const navBtn = document.getElementById('nav-' + tabId); if(navBtn) navBtn.classList.add('active', 'bg-slate-800/50', 'text-white');
             
-            // GLITCH EFFECT TRIGGER
             const mainContent = document.querySelector('main');
             mainContent.classList.add('glitch-active');
-            try { playBeep('IN'); } catch(e){} // subtle feedback
+            try { playBeep('IN'); } catch(e){} 
             setTimeout(() => mainContent.classList.remove('glitch-active'), 350);
 
             const container = document.getElementById('content-container'); container.innerHTML = ''; 
@@ -1774,7 +1801,7 @@
                     err.classList.remove('hidden'); 
                     try { playBeep('ERROR'); } catch(e){}
                 }
-            }, 1500); // Simulasi delay biometrik
+            }, 1500); 
         }
 
         window.runBootSequence = function() {
@@ -1850,7 +1877,7 @@
             setInterval(() => {
                 if (!currentUser) return;
                 const textEl = document.getElementById('drone-text');
-                if (textEl && textEl.style.opacity === '1') return; // Jangan timpa pesan yang sedang tampil
+                if (textEl && textEl.style.opacity === '1') return; 
 
                 const dbStatus = navigator.onLine ? "SINKRONISASI CLOUD AKTIF" : "DATABASE LOKAL AMAN";
                 const itemStatus = `MEMANTAU ${inventory.length} ASET TERDAFTAR`;
@@ -1866,7 +1893,7 @@
                 const randomMsg = idleMessages[Math.floor(Math.random() * idleMessages.length)];
                 
                 if(typeof triggerDroneMessage === 'function') triggerDroneMessage(randomMsg, 'info');
-            }, 35000); // Memantau setiap 35 detik secara otomatis
+            }, 35000); 
         }
 
         // BOOTSTRAP INITIALIZATION
