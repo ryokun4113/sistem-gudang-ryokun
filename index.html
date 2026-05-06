@@ -1322,6 +1322,12 @@
 
         window.printMultipleBarcodes = function(items) {
             const printArea = document.getElementById('print-area');
+            
+            printArea.style.display = 'block';
+            printArea.style.visibility = 'hidden'; 
+            printArea.style.position = 'absolute';
+            printArea.style.top = '-9999px';
+
             let html = '<div class="barcode-container">';
             items.forEach((item, index) => {
                 html += `
@@ -1343,20 +1349,48 @@
             
             items.forEach((item, index) => {
                 try {
-                    // MENGECILKAN BARCODE AGAR LEBIH EFISIEN
-                    JsBarcode(`#print-barcode-${index}`, item.id, { format: "CODE128", width: 1.2, height: 18, displayValue: false, margin: 0 });
-                } catch(e) {}
+                    JsBarcode(`#print-barcode-${index}`, String(item.id), { 
+                        format: "CODE128", 
+                        width: 1.2, 
+                        height: 18, 
+                        displayValue: false, 
+                        margin: 0 
+                    });
+                } catch(e) { 
+                    console.error("Barcode Render Error:", e); 
+                }
                 
-                const itemLogs = mutationLogs.filter(log => log.id === item.id); const lastLog = itemLogs[0]; const lastDate = lastLog ? `${lastLog.fullDate} ${lastLog.time}` : item.date; const op = lastLog ? lastLog.operator : 'SYS';
+                const itemLogs = mutationLogs.filter(log => log.id === item.id); 
+                const lastLog = itemLogs[0]; 
+                const lastDate = lastLog ? `${lastLog.fullDate} ${lastLog.time}` : item.date; 
+                const op = lastLog ? lastLog.operator : 'SYS';
                 const logbookText = `ID:${item.id}\nNMA:${item.name}\nSN:${item.serial}\nSTS:${item.status}\nHLD:${item.holder}\nUPD:${lastDate}\nOP:${op}`;
                 
                 try {
                     const qrContainer = document.getElementById(`print-qr-${index}`);
-                    // MENGECILKAN QR CODE
-                    new QRCode(qrContainer, { text: logbookText, width: 50, height: 50, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L });
-                } catch(e) {}
+                    qrContainer.innerHTML = ""; 
+                    new QRCode(qrContainer, { 
+                        text: logbookText, 
+                        width: 50, 
+                        height: 50, 
+                        colorDark : "#000000", 
+                        colorLight : "#ffffff", 
+                        correctLevel : QRCode.CorrectLevel.L 
+                    });
+                } catch(e) { 
+                    console.error("QRCode Render Error:", e); 
+                }
             });
-            setTimeout(() => { window.print(); }, 800);
+
+            setTimeout(() => { 
+                window.print(); 
+                setTimeout(() => {
+                    printArea.style.display = '';
+                    printArea.style.visibility = '';
+                    printArea.style.position = '';
+                    printArea.style.top = '';
+                }, 1000);
+            }, 800);
         }
 
         window.toggleSelectAll = function() { const isChecked = document.getElementById('selectAllCheckbox').checked; document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = isChecked); }
