@@ -725,25 +725,29 @@
                 mutationLogs.unshift({ id: item.id, name: item.name, status: item.status, holder: item.holder, time: now.toLocaleTimeString('id-ID'), fullDate: now.toLocaleDateString('id-ID'), operator: currentUser ? currentUser.username : "SYSTEM", type: 'SCAN', timestamp: Date.now(), sessionName: currentSessionName || 'REGULER' });
                 save(); 
                 
-                let ttsText = `${item.name}. `;
+                // --- PERBAIKAN FITUR SUARA (TTS) ---
+                const poporSpeech = (item.popor && item.popor !== '-') ? item.popor : 'Kosong';
+                const holderSpeech = (item.holder && item.holder !== '-') ? item.holder : 'Tanpa nama';
+                let ttsText = `${item.name}. Nomor Popor, ${poporSpeech}. Pemegang, ${holderSpeech}. Status, ${isMasuk ? 'Masuk kembali ke gudang' : 'Keluar'}.`;
+                // -----------------------------------
+
                 const adminName = currentUser ? currentUser.username : 'Sistem';
 
                 if (isRapidScanMode) {
                     if(mainContent) mainContent.classList.add(isMasuk ? 'flash-in' : 'flash-out'); playBeep(isMasuk ? 'IN' : 'OUT');
-                    if (isMasuk) { ttsText += "Masuk ke gudang."; } else { ttsText += "Keluar."; }
                 } else {
                     if(isMasuk) {
                         if(feedback) feedback.className = "mt-6 p-4 md:p-6 rounded-[24px] border-emerald-600 bg-emerald-950/30 border-2 flex items-center gap-4 md:gap-6 animate-in fade-in zoom-in duration-300 bg-carbon hud-card w-full";
                         if(iconBox) { iconBox.className = "w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-900/50 cyber-cut"; iconBox.innerHTML = `<i data-lucide="arrow-down-to-line" class="w-6 h-6 md:w-8 md:h-8 text-white"></i>`; }
                         if(fTitle) { fTitle.className = "text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1"; fTitle.innerText = "MUTASI MASUK (IN)"; }
-                        if(fDesc) { fDesc.className = "font-black text-sm md:text-xl text-emerald-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor] truncate"; fDesc.innerText = item.name;}
-                        if(mainContent) mainContent.classList.add('flash-in'); playBeep('IN'); ttsText += "Telah dikembalikan ke gudang.";
+                        if(fDesc) { fDesc.className = "font-black text-sm md:text-xl text-emerald-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor] truncate"; fDesc.innerHTML = `${item.name} <br><span class="text-[10px] text-emerald-200/70 font-bold tracking-widest">POPOR: ${item.popor || '-'} | PEMEGANG: ${item.holder || '-'}</span>`;}
+                        if(mainContent) mainContent.classList.add('flash-in'); playBeep('IN');
                     } else {
                         if(feedback) feedback.className = "mt-6 p-4 md:p-6 rounded-[24px] border-orange-500 bg-orange-950/30 border-2 flex items-center gap-4 md:gap-6 animate-in fade-in zoom-in duration-300 bg-carbon hud-card hud-orange w-full";
                         if(iconBox) { iconBox.className = "w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-orange-900/50 cyber-cut"; iconBox.innerHTML = `<i data-lucide="arrow-up-from-line" class="w-6 h-6 md:w-8 md:h-8 text-white"></i>`; }
                         if(fTitle) { fTitle.className = "text-[9px] md:text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1"; fTitle.innerText = `MUTASI KELUAR (OP: ${adminName})`; }
-                        if(fDesc) { fDesc.className = "font-black text-sm md:text-xl text-orange-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor] truncate"; fDesc.innerText = item.name;}
-                        if(mainContent) mainContent.classList.add('flash-out'); playBeep('OUT'); ttsText += (item.holder && item.holder !== '-') ? `Dibawa oleh, ${item.holder}. Diproses oleh operator, ${adminName}.` : `Keluar. Diproses oleh operator, ${adminName}.`;
+                        if(fDesc) { fDesc.className = "font-black text-sm md:text-xl text-orange-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor] truncate"; fDesc.innerHTML = `${item.name} <br><span class="text-[10px] text-orange-200/70 font-bold tracking-widest">POPOR: ${item.popor || '-'} | PEMEGANG: ${item.holder || '-'}</span>`;}
+                        if(mainContent) mainContent.classList.add('flash-out'); playBeep('OUT');
                     }
                 }
                 speakText(ttsText);
@@ -945,237 +949,25 @@
         window.showAlert = function(msg) { document.getElementById('alert-message').innerText = msg; document.getElementById('alert-modal').classList.remove('hidden'); }
         window.closeAlert = function() { document.getElementById('alert-modal').classList.add('hidden'); }
 
-        window.renderInventory = function() {
-            const sortedInventory = getSortedInventory();
-            document.getElementById('content-container').innerHTML = `
-                <div class="content-section max-w-6xl mx-auto py-6 md:py-10">
-                    <h2 class="text-2xl md:text-3xl font-black text-white italic uppercase mb-6"><span class="text-emerald-500/50 mr-2">[</span>Inventaris Aset<span class="text-emerald-500/50 ml-2">]</span></h2>
-                    <div class="bg-[#1e293b] p-6 md:p-8 rounded-[30px] border border-slate-800 shadow-2xl hud-card bg-carbon">
-                        <div class="flex flex-col md:flex-row gap-4 mb-6">
-                            <div class="relative flex-1"><i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"></i><input type="text" placeholder="CARI ASET (NAMA / SKU / KATEGORI)..." oninput="filterInventory(this.value)" class="w-full bg-[#020617]/80 border border-slate-800 pl-12 pr-4 py-4 rounded-2xl text-white font-bold outline-none uppercase focus:border-emerald-500 transition-colors"></div>
-                            <select onchange="changeInventorySort(this.value)" class="bg-[#020617]/80 border border-slate-800 p-4 rounded-2xl text-emerald-500 font-bold outline-none uppercase focus:border-emerald-500 appearance-none min-w-[200px]"><option value="newest" ${currentInventorySort === 'newest' ? 'selected' : ''}>Terbaru Terlebih Dahulu</option><option value="oldest" ${currentInventorySort === 'oldest' ? 'selected' : ''}>Terlama Terlebih Dahulu</option><option value="category_asc" ${currentInventorySort === 'category_asc' ? 'selected' : ''}>Berdasarkan Kategori (A-Z)</option><option value="category_desc" ${currentInventorySort === 'category_desc' ? 'selected' : ''}>Berdasarkan Kategori (Z-A)</option></select>
-                            <button onclick="printSelectedBarcodes()" class="btn-interact cyber-cut bg-slate-800 text-white px-6 py-4 rounded-2xl font-black uppercase hover:bg-slate-700 transition flex items-center justify-center gap-2 border border-slate-700"><i data-lucide="printer" class="w-5 h-5"></i> Cetak Pilihan</button>
-                        </div>
-                        <div class="overflow-x-auto custom-scrollbar bg-[#020617] rounded-2xl border border-slate-800">
-                            <table class="w-full text-left min-w-[900px]">
-                                <thead class="bg-slate-900/80 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-800">
-                                    <tr><th class="p-4 text-center w-12"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" class="w-4 h-4 accent-emerald-500 cursor-pointer"></th><th class="p-4">SKU / Nama Aset</th><th class="p-4">Kategori / S/N</th><th class="p-4 text-center">Status</th><th class="p-4">Pemegang Terakhir</th><th class="p-4 text-right">Aksi Sistem</th></tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-800/50">
-                                    ${sortedInventory.length > 0 ? sortedInventory.map(item => `
-                                        <tr class="inventory-row hover:bg-slate-800/50 transition-colors" data-search="${item.id} ${item.name} ${item.serial} ${item.category} ${item.holder}">
-                                            <td class="p-4 text-center"><input type="checkbox" class="item-checkbox w-4 h-4 accent-emerald-500 cursor-pointer" value="${item.id}"></td>
-                                            <td class="p-4"><p class="text-xs font-black text-white uppercase">${item.name}</p><p class="text-[10px] font-mono text-emerald-500 mt-1">${item.id}</p></td>
-                                            <td class="p-4"><p class="text-[10px] font-bold text-slate-300 uppercase">${item.category}</p><p class="text-[9px] font-mono text-slate-500 mt-1">SN: ${item.serial}</p></td>
-                                            <td class="p-4 text-center"><span class="status-badge ${item.status === 'Di Gudang' ? 'status-gudang' : 'status-keluar'}">${item.status}</span></td>
-                                            <td class="p-4"><p class="text-[10px] font-bold text-slate-300 uppercase">${item.holder}</p></td>
-                                            <td class="p-4 text-right space-x-3">
-                                                <button data-id="${item.id}" onclick="openDetailModal(this.getAttribute('data-id'))" class="btn-interact text-blue-400 hover:text-blue-300 transition-colors" title="Rincian Lengkap"><i data-lucide="info" class="w-5 h-5 inline"></i></button>
-                                                <button data-id="${item.id}" onclick="openEditModal(this.getAttribute('data-id'))" class="btn-interact text-yellow-400 hover:text-yellow-300 transition-colors" title="Edit Aset"><i data-lucide="edit" class="w-5 h-5 inline"></i></button>
-                                                <button data-id="${item.id}" onclick="printSingleBarcode(this.getAttribute('data-id'))" class="btn-interact text-slate-400 hover:text-white transition-colors" title="Cetak Barcode"><i data-lucide="printer" class="w-5 h-5 inline"></i></button>
-                                                <button data-id="${item.id}" onclick="openAdminModal(this.getAttribute('data-id'))" class="btn-interact text-red-500 hover:text-red-400 transition-colors" title="Hapus Aset"><i data-lucide="trash-2" class="w-5 h-5 inline"></i></button>
-                                            </td>
-                                        </tr>
-                                    `).join('') : `<tr><td colspan="6" class="p-10 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">Inventaris Kosong. Belum ada aset yang terdaftar.</td></tr>`}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        };
-
-        window.renderOpname = function() {
-            if (!isOpnameActive) {
-                document.getElementById('content-container').innerHTML = `
-                    <div class="content-section max-w-4xl mx-auto py-6 md:py-10 text-center">
-                        <h2 class="text-2xl md:text-3xl font-black text-white italic uppercase mb-6"><span class="text-emerald-500/50 mr-2">[</span>Stock Opname Fisik<span class="text-emerald-500/50 ml-2">]</span></h2>
-                        <div class="bg-[#1e293b] p-8 md:p-14 rounded-[40px] border border-slate-800 shadow-2xl hud-card bg-carbon relative overflow-hidden">
-                            <div class="absolute -right-10 -top-10 opacity-10"><i data-lucide="clipboard-check" class="w-64 h-64 text-emerald-500"></i></div>
-                            <i data-lucide="clipboard-check" class="w-16 h-16 md:w-20 md:h-20 text-emerald-500 mx-auto mb-6 relative z-10"></i>
-                            <p class="text-slate-400 mb-8 max-w-2xl mx-auto font-medium text-xs md:text-sm leading-relaxed relative z-10">
-                                Fitur Stock Opname Fisik dirancang khusus untuk keperluan <b>Audit Berkala</b>. Sistem akan secara otomatis mengkalkulasi ketersediaan aset secara real-time:<br><br>
-                                <span class="inline-block text-left bg-[#020617] p-5 rounded-2xl border border-slate-800 text-[10px] md:text-xs space-y-2"><span class="block text-emerald-500"><b>1. Aset Diharapkan:</b> Barang yang berstatus 'Di Gudang' (wajib discan).</span><span class="block text-blue-500"><b>2. Sedang Dipinjam:</b> Barang berstatus 'Keluar' (diabaikan dari audit).</span><span class="block text-emerald-300"><b>3. Aset Cocok:</b> Fisik barang yang berhasil diverifikasi scanner.</span><span class="block text-red-500"><b>4. Selisih (Missing):</b> Barang terdata namun fisiknya belum ditemukan di gudang.</span><span class="block text-orange-500"><b>5. Ekstra / Tidak Dikenal:</b> Barcode asing / tak terdaftar terdeteksi.</span></span>
-                            </p>
-                            <button onclick="startOpname()" class="btn-interact cyber-cut bg-emerald-600 text-white px-8 py-5 rounded-2xl font-black uppercase text-sm md:text-base tracking-widest hover:bg-emerald-500 transition shadow-xl shadow-emerald-900/20 relative z-10">Mulai Sesi Opname Sekarang</button>
-                        </div>
-                    </div>
-                `;
-            } else {
-                const missing = opnameData.expected.filter(id => !opnameData.scanned.includes(id));
-                document.getElementById('content-container').innerHTML = `
-                    <div class="content-section max-w-6xl mx-auto py-6 md:py-10">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4"><h2 class="text-2xl font-black text-white italic uppercase"><span class="text-emerald-500/50 mr-2">[</span>Sesi Opname Sedang Berjalan<span class="text-emerald-500/50 ml-2">]</span></h2><button onclick="stopOpname()" class="btn-interact cyber-cut bg-red-600 text-white px-6 py-3 font-black uppercase tracking-widest hover:bg-red-500 text-xs shadow-lg shadow-red-900/20 flex items-center gap-2"><i data-lucide="x-square" class="w-4 h-4"></i> Akhiri Sesi</button></div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                            <div class="bg-[#020617] p-5 rounded-[20px] border border-slate-800 text-center"><p class="text-[8px] md:text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Diharapkan (In)</p><p class="text-2xl md:text-3xl font-black text-white">${opnameData.expected.length}</p></div>
-                            <div class="bg-[#020617] p-5 rounded-[20px] border border-blue-900/50 text-center"><p class="text-[8px] md:text-[9px] text-blue-500 font-black uppercase tracking-widest mb-1">Sedang Dipinjam (Out)</p><p class="text-2xl md:text-3xl font-black text-blue-400">${opnameData.out.length}</p></div>
-                            <div class="bg-emerald-950/20 p-5 rounded-[20px] border border-emerald-900/50 text-center shadow-[inset_0_0_15px_rgba(16,185,129,0.1)]"><p class="text-[8px] md:text-[9px] text-emerald-500 font-black uppercase tracking-widest mb-1">Berhasil Discan</p><p class="text-2xl md:text-3xl font-black text-emerald-400">${opnameData.scanned.length}</p></div>
-                            <div class="bg-red-950/20 p-5 rounded-[20px] border border-red-900/50 text-center shadow-[inset_0_0_15px_rgba(239,68,68,0.1)]"><p class="text-[8px] md:text-[9px] text-red-500 font-black uppercase tracking-widest mb-1">Selisih / Missing</p><p class="text-2xl md:text-3xl font-black text-red-400">${missing.length}</p></div>
-                        </div>
-                        <div class="glass-effect p-6 md:p-8 rounded-[30px] border-slate-700 mb-8 relative overflow-hidden bg-[#020617]">
-                            <div class="absolute inset-0 bg-[rgba(16,185,129,0.02)] pointer-events-none"></div><div class="crt-scanline absolute inset-0 pointer-events-none opacity-50 z-10"></div>
-                            <p class="text-[10px] text-emerald-500 font-black uppercase tracking-widest mb-3 text-center relative z-20 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">Siap Menerima Input Scanner Hardware</p>
-                            <input type="text" id="opname-scan-input" placeholder="SCAN BARCODE FISIK ASET DI SINI..." onkeypress="if(event.key === 'Enter') handleOpnameScan(this.value)" class="w-full bg-[#020617] border border-slate-700 p-6 rounded-2xl text-emerald-400 font-mono font-bold outline-none uppercase text-center text-xl tracking-widest focus:border-emerald-500 transition-colors shadow-[inset_0_0_20px_rgba(16,185,129,0.1)] relative z-20">
-                        </div>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div class="bg-[#020617] p-6 rounded-[30px] border border-red-900/50"><h3 class="text-xs font-black text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2"><i data-lucide="alert-circle" class="w-4 h-4"></i> Aset Belum Ditemukan (${missing.length})</h3><ul class="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">${missing.length ? missing.map(id => `<li class="bg-red-950/20 border border-red-900/30 p-3 rounded-xl flex justify-between items-center"><span class="font-mono text-xs font-bold text-red-400">${id}</span> <span class="text-[10px] text-slate-400 uppercase truncate ml-4">${inventory.find(i=>i.id===id)?.name || ''}</span></li>`).join('') : '<li class="text-center text-slate-500 text-xs font-bold py-4">Luar Biasa! Seluruh aset berhasil ditemukan.</li>'}</ul></div>
-                            <div class="bg-[#020617] p-6 rounded-[30px] border border-orange-900/50"><h3 class="text-xs font-black text-orange-500 uppercase tracking-widest mb-4 flex items-center gap-2"><i data-lucide="help-circle" class="w-4 h-4"></i> Aset Tidak Dikenal / Extra (${opnameData.extra.length})</h3><ul class="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">${opnameData.extra.length ? opnameData.extra.map(id => `<li class="bg-orange-950/20 border border-orange-900/30 p-3 rounded-xl"><span class="font-mono text-xs font-bold text-orange-400">${id}</span></li>`).join('') : '<li class="text-center text-slate-500 text-xs font-bold py-4">Tidak ada aset asing yang discan.</li>'}</ul></div>
-                        </div>
-                    </div>
-                `;
-                const input = document.getElementById('opname-scan-input'); if(input) { input.focus(); input.addEventListener('blur', (e) => { setTimeout(() => e.target.focus(), 10); }); }
-            }
-            lucide.createIcons();
-        };
-
-        window.startOpname = function() {
-            isOpnameActive = true; if(typeof triggerDroneMessage === 'function') triggerDroneMessage("SESI AUDIT OPNAME DIMULAI", "info");
-            const expectedIn = inventory.filter(i => i.status === 'Di Gudang').map(i => i.id); const outItems = inventory.filter(i => i.status === 'Keluar').map(i => i.id);
-            opnameData = { expected: expectedIn, scanned: [], extra: [], out: outItems }; renderOpname();
-        }
-
-        window.stopOpname = function() { isOpnameActive = false; if(typeof triggerDroneMessage === 'function') triggerDroneMessage("SESI AUDIT SELESAI", "success"); renderOpname(); }
-
         window.handleOpnameScan = function(rawCode) {
             const code = String(rawCode).replace(/\s+/g, '').toUpperCase().trim(); if(!code) return;
             const input = document.getElementById('opname-scan-input'); if(input) { input.value = ''; input.focus(); }
-            if(opnameData.expected.includes(code)) { if(!opnameData.scanned.includes(code)) { opnameData.scanned.push(code); playBeep('IN'); speakText("Cocok."); } else { playBeep('OUT'); speakText("Aset sudah discan."); } } 
-            else if (opnameData.out.includes(code)) { playBeep('OUT'); speakText("Perhatian, aset ini tercatat sedang dipinjam."); if(typeof triggerDroneMessage === 'function') triggerDroneMessage("ASET BERSTATUS KELUAR", "error"); } 
-            else { if(!opnameData.extra.includes(code)) { opnameData.extra.push(code); } playBeep('ERROR'); speakText("Aset tidak dikenal."); if(typeof triggerDroneMessage === 'function') triggerDroneMessage("BARCODE TIDAK DIKENAL", "error"); }
+            
+            const item = inventory.find(i => String(i.id).replace(/\s+/g, '').toUpperCase() === code);
+            const itemName = item ? item.name : "Aset";
+
+            if(opnameData.expected.includes(code)) {
+                if(!opnameData.scanned.includes(code)) { opnameData.scanned.push(code); playBeep('IN'); speakText(`${itemName}. Cocok.`); } 
+                else { playBeep('OUT'); speakText(`${itemName}. Sudah discan sebelumnya.`); }
+            } else if (opnameData.out.includes(code)) {
+                playBeep('OUT'); speakText(`${itemName}. Perhatian, aset ini tercatat sedang dipinjam.`);
+                if(typeof triggerDroneMessage === 'function') triggerDroneMessage("ASET BERSTATUS KELUAR", "error");
+            } else {
+                if(!opnameData.extra.includes(code)) { opnameData.extra.push(code); }
+                playBeep('ERROR'); speakText("Peringatan! Aset tidak dikenal.");
+                if(typeof triggerDroneMessage === 'function') triggerDroneMessage("BARCODE TIDAK DIKENAL", "error");
+            }
             renderOpname();
-        }
-
-        window.renderLeaderboard = function() {
-            const counts = {}; mutationLogs.forEach(log => { if(log.operator && log.operator !== 'SYSTEM' && log.operator !== 'SYSTEM IMPORT') { counts[log.operator] = (counts[log.operator] || 0) + 1; } });
-            const sortedLeaders = Object.entries(counts).sort((a,b) => b[1] - a[1]);
-            document.getElementById('content-container').innerHTML = `
-                <div class="content-section max-w-4xl mx-auto py-6 md:py-10">
-                    <h2 class="text-2xl md:text-3xl font-black text-white italic uppercase mb-6 text-center"><span class="text-yellow-500/50 mr-2">[</span>Papan Kinerja Admin<span class="text-yellow-500/50 ml-2">]</span></h2>
-                    <div class="bg-[#1e293b] p-6 md:p-10 rounded-[40px] border border-slate-800 shadow-2xl bg-carbon hud-card">
-                        <div class="flex justify-center mb-8"><div class="w-20 h-20 bg-yellow-900/30 rounded-full flex items-center justify-center border-2 border-yellow-500/50 cyber-cut"><i data-lucide="award" class="w-10 h-10 text-yellow-500"></i></div></div>
-                        <ul class="divide-y divide-slate-800">
-                            ${sortedLeaders.map((leader, idx) => `
-                                <li class="py-5 flex items-center justify-between hover:bg-slate-800/30 px-4 rounded-2xl transition-colors">
-                                    <div class="flex items-center gap-5 md:gap-6"><div class="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center font-black text-lg border ${idx === 0 ? 'text-yellow-500 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.5)]' : (idx === 1 ? 'text-slate-300 border-slate-400' : (idx === 2 ? 'text-orange-400 border-orange-700' : 'text-slate-600 border-slate-800'))}">${idx + 1}</div><div><p class="font-black text-white uppercase text-base md:text-lg tracking-widest">${leader[0]}</p><p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Total Mutasi Dilakukan</p></div></div>
-                                    <div class="text-2xl md:text-4xl font-black text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">${leader[1]}</div>
-                                </li>
-                            `).join('') || '<p class="text-center text-slate-500 font-bold uppercase text-xs">Belum ada data aktivitas admin yang memadai.</p>'}
-                        </ul>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        window.renderUsersManagement = function() {
-            if(!currentUser || currentUser.role !== 'superadmin') {
-                return document.getElementById('content-container').innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-20 text-center animate-pulse"><i data-lucide="shield-alert" class="w-24 h-24 text-red-600 mb-6 drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]"></i><h2 class="text-3xl font-black text-red-500 uppercase tracking-widest">Akses Ditolak</h2><p class="text-slate-400 mt-4 font-bold text-sm">Halaman ini eksklusif hanya untuk level SUPERADMIN.</p></div>`;
-            }
-            document.getElementById('content-container').innerHTML = `
-                <div class="content-section max-w-5xl mx-auto py-6 md:py-10">
-                    <h2 class="text-2xl md:text-3xl font-black text-white italic uppercase mb-6"><span class="text-blue-500/50 mr-2">[</span>Manajemen Akses Sistem<span class="text-blue-500/50 ml-2">]</span></h2>
-                    <div class="bg-[#1e293b] p-6 md:p-8 rounded-[30px] border border-slate-800 shadow-2xl mb-8 bg-carbon hud-card hud-blue">
-                        <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 flex items-center gap-2"><i data-lucide="user-plus" class="w-5 h-5"></i> Registrasi Admin Baru</h3>
-                        <div class="flex flex-col md:flex-row gap-4"><input type="text" id="new-admin-user" placeholder="USERNAME BARU" class="flex-1 bg-[#020617]/80 border border-slate-800 p-4 rounded-2xl text-white font-bold outline-none uppercase focus:border-blue-500 caret-blue-500 transition-colors"><input type="text" id="new-admin-pass" placeholder="PASSWORD BARU" class="flex-1 bg-[#020617]/80 border border-slate-800 p-4 rounded-2xl text-white font-bold outline-none uppercase focus:border-blue-500 caret-blue-500 transition-colors"><button onclick="addAdmin()" class="btn-interact cyber-cut bg-blue-600 text-white px-8 py-4 font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-lg shadow-blue-900/20">Tambah</button></div>
-                    </div>
-                    <div class="bg-[#1e293b] p-6 md:p-8 rounded-[30px] border border-slate-800 shadow-2xl overflow-hidden bg-carbon">
-                        <h3 class="text-xs font-black text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-2"><i data-lucide="users" class="w-5 h-5 text-emerald-500"></i> Daftar Pengguna Sistem</h3>
-                        <div class="overflow-x-auto custom-scrollbar bg-[#020617] rounded-2xl border border-slate-800">
-                            <table class="w-full text-left min-w-[500px]">
-                                <thead class="bg-slate-900/80 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-800"><tr><th class="p-4 md:p-5">Username</th><th class="p-4 md:p-5 text-center">Tingkat Akses (Role)</th><th class="p-4 md:p-5 text-right">Otorisasi</th></tr></thead>
-                                <tbody class="divide-y divide-slate-800/50">
-                                    ${users.map(u => `
-                                        <tr class="hover:bg-slate-800/50 transition-colors">
-                                            <td class="p-4 md:p-5 font-black text-white uppercase tracking-widest flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-slate-800 flex justify-center items-center text-emerald-500 text-xs">${u.username.charAt(0)}</div> ${u.username}</td>
-                                            <td class="p-4 md:p-5 text-center"><span class="bg-emerald-950/50 border border-emerald-900/50 text-emerald-400 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-inner">${u.role}</span></td>
-                                            <td class="p-4 md:p-5 text-right">${u.username !== 'SUPERADMIN' ? `<button onclick="deleteAdmin('${u.username}')" class="btn-interact text-slate-400 hover:text-red-500 bg-[#020617] p-3 rounded-xl border border-slate-800 hover:border-red-500 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : '<span class="text-[9px] text-slate-600 font-bold uppercase mr-4">LOCKED</span>'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        window.addAdmin = function() {
-            const u = document.getElementById('new-admin-user').value.toUpperCase().trim(); const p = document.getElementById('new-admin-pass').value.trim();
-            if(!u || !p) return showAlert("USERNAME DAN PASSWORD WAJIB DIISI!"); if(users.find(x => x.username === u)) return showAlert("USERNAME SUDAH TERDAFTAR DI SISTEM!");
-            users.push({username: u, password: p, role: 'admin'}); save(); renderUsersManagement(); showAlert("AKUN ADMIN BARU BERHASIL DITAMBAHKAN!");
-        }
-
-        window.deleteAdmin = function(u) { if(u === 'SUPERADMIN') return; users = users.filter(x => x.username !== u); save(); renderUsersManagement(); showAlert(`AKUN [${u}] BERHASIL DIHAPUS DARI SISTEM.`); }
-
-        window.switchTab = function(tabId) {
-            currentActiveTab = tabId; isRapidScanMode = false;
-            if (window.innerWidth < 768) { document.getElementById('app-sidebar').classList.add('-translate-x-full'); document.getElementById('mobile-overlay').classList.add('hidden'); }
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active', 'bg-slate-800/50', 'text-white')); const navBtn = document.getElementById('nav-' + tabId); if(navBtn) navBtn.classList.add('active', 'bg-slate-800/50', 'text-white');
-            
-            const mainContent = document.querySelector('main'); mainContent.classList.add('glitch-active'); try { playBeep('IN'); } catch(e){} setTimeout(() => mainContent.classList.remove('glitch-active'), 350);
-            const container = document.getElementById('content-container'); container.innerHTML = ''; 
-            switch(tabId) { case 'dashboard': renderDashboard(); break; case 'scanner': renderScanner(); break; case 'inventory': renderInventory(); break; case 'add': renderAddForm(); break; case 'opname': renderOpname(); break; case 'leaderboard': renderLeaderboard(); break; case 'users': renderUsersManagement(); break; }
-            if(typeof window.triggerDroneScan === 'function') window.triggerDroneScan(tabId);
-        }
-
-        window.toggleMobileMenu = function() { const sidebar = document.getElementById('app-sidebar'); const overlay = document.getElementById('mobile-overlay'); sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
-
-        window.showApp = function() {
-            document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app-sidebar').classList.remove('hidden'); document.querySelector('main').classList.remove('hidden'); document.getElementById('mobile-header').classList.remove('hidden'); document.getElementById('mobile-header').classList.add('flex'); document.getElementById('connection-hud').classList.remove('hidden'); document.getElementById('digital-clock').classList.remove('hidden'); document.getElementById('drone-assistant').classList.remove('hidden');
-            
-            document.getElementById('user-display-name').innerText = currentUser.username; document.getElementById('user-initial').innerText = currentUser.username.charAt(0); document.getElementById('user-role-name').innerText = currentUser.role === 'superadmin' ? 'Super User' : 'Admin Batalyon';
-            if(currentUser.role === 'superadmin') document.getElementById('nav-users').classList.remove('hidden'); else document.getElementById('nav-users').classList.add('hidden');
-            
-            lucide.createIcons(); switchTab('dashboard'); updateNetworkUI(); resetAutoLogout();
-        }
-
-        window.attemptLogin = function() {
-            const un = document.getElementById('login-username').value.trim().toUpperCase(); const pw = document.getElementById('login-password').value; const btn = document.getElementById('biometric-btn'); const err = document.getElementById('login-error');
-            btn.classList.add('scanning'); try { playBeep('IN'); } catch(e){} err.classList.add('hidden');
-            
-            setTimeout(() => {
-                btn.classList.remove('scanning'); const found = users.find(u => u.username === un && u.password === pw);
-                if(found) { currentUser = found; save(); document.getElementById('login-username').value = ''; document.getElementById('login-password').value = ''; speakText("Akses diterima. Menginisiasi sesi komando."); showApp(); } 
-                else { err.classList.remove('hidden'); try { playBeep('ERROR'); } catch(e){} }
-            }, 1500); 
-        }
-
-        window.runBootSequence = function() {
-            const terminal = document.getElementById('boot-terminal'); const loginContainer = document.getElementById('login-form-container'); const loginScreen = document.getElementById('login-screen');
-            loginScreen.classList.remove('hidden'); terminal.classList.remove('hidden'); loginContainer.classList.add('hidden');
-            const bootText = [ "RYO-KUN OS v9.0.4. INITIALIZING...", "LOADING TACTICAL NEURAL NETWORK................ [OK]", "CONNECTING TO SECURE DB ENCLAVE................ [OK]", "BYPASSING FIREWALL PROXIES..................... [OK]", "DECRYPTING CLASSIFIED ASSET DOSSIERS........... [OK]", "CALIBRATING BIOMETRIC SCANNERS................. [OK]", "SYSTEM ONLINE. AWAITING CREDENTIALS." ];
-            let i = 0; terminal.innerHTML = '';
-            const interval = setInterval(() => {
-                if (i < bootText.length) { terminal.innerHTML += `> ${bootText[i]}<br><br>`; try { playBeep('IN'); } catch(e){} i++; } 
-                else { clearInterval(interval); setTimeout(() => { terminal.classList.add('hidden'); loginContainer.classList.remove('hidden'); loginContainer.classList.replace('scale-95', 'scale-100'); loginContainer.classList.replace('opacity-0', 'opacity-100'); setTimeout(() => document.getElementById('login-username').focus(), 500); }, 800); }
-            }, 350);
-        }
-
-        window.initMatrixRain = function() {
-            const canvas = document.getElementById('matrix-canvas'); if(!canvas) return; const ctx = canvas.getContext('2d'); canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            const letters = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ012345678901@#$%^&*'; const fontSize = 14; const columns = canvas.width / fontSize; const drops = Array.from({length: Math.floor(columns)}).fill(1);
-            function draw() {
-                ctx.fillStyle = 'rgba(2, 6, 23, 0.1)'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#0f766e'; ctx.font = fontSize + 'px monospace';
-                for(let i = 0; i < drops.length; i++) { const text = letters.charAt(Math.floor(Math.random() * letters.length)); ctx.fillText(text, i * fontSize, drops[i] * fontSize); if(drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++; }
-            }
-            setInterval(draw, 40); window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; drops.length = Math.floor(canvas.width / fontSize); drops.fill(1); });
-        };
-
-        window.logout = function() { currentUser = null; save(); clearTimeout(inactivityTimeout); window.location.reload(); }
-
-        window.triggerDroneScan = function(tabId) { if(typeof triggerDroneMessage === 'function') triggerDroneMessage("MEMINDAI MENU...", "info"); };
-
-        function startAIMonitoring() {
-            setInterval(() => {
-                if (!currentUser) return; const textEl = document.getElementById('drone-text'); if (textEl && textEl.style.opacity === '1') return; 
-                const dbStatus = navigator.onLine ? "SINKRONISASI CLOUD AKTIF" : "DATABASE LOKAL AMAN"; const itemStatus = `MEMANTAU ${inventory.length} ASET TERDAFTAR`; const netStatus = navigator.onLine ? "KONEKSI INTERNET STABIL" : "BERJALAN DI MODE OFFLINE";
-                const idleMessages = [ "SISTEM DALAM KONDISI OPTIMAL", "TIDAK TERDETEKSI ANOMALI", dbStatus, itemStatus, netStatus, "AI J.A.R.V.I.S AKTIF MEMANTAU" ];
-                const randomMsg = idleMessages[Math.floor(Math.random() * idleMessages.length)];
-                if(typeof triggerDroneMessage === 'function') triggerDroneMessage(randomMsg, 'info');
-            }, 35000); 
         }
 
         window.onload = () => {
