@@ -523,7 +523,7 @@
         }
 
         // ==========================================
-        // AI DRONE MESSAGE ANIMATION (FIX MISSING FUNCTION)
+        // AI DRONE MESSAGE ANIMATION
         // ==========================================
         window.triggerDroneMessage = function(msg, type) {
             const textEl = document.getElementById('drone-text');
@@ -1323,6 +1323,7 @@
         window.printMultipleBarcodes = function(items) {
             const printArea = document.getElementById('print-area');
             
+            // PERBAIKAN: Reset CSS dari Javascript SEBELUM rendering
             printArea.style.display = 'block';
             printArea.style.visibility = 'hidden'; 
             printArea.style.position = 'absolute';
@@ -1383,13 +1384,13 @@
             });
 
             setTimeout(() => { 
+                // PERBAIKAN: Menghapus style inline SEBELUM print dijalankan
+                printArea.style.display = '';
+                printArea.style.visibility = '';
+                printArea.style.position = '';
+                printArea.style.top = '';
+                
                 window.print(); 
-                setTimeout(() => {
-                    printArea.style.display = '';
-                    printArea.style.visibility = '';
-                    printArea.style.position = '';
-                    printArea.style.top = '';
-                }, 1000);
             }, 800);
         }
 
