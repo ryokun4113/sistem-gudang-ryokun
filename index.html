@@ -844,11 +844,17 @@
 
                 sendBotNotification(item.name, item.id, isMasuk, item.holder, adminName);
                 
-                let ttsText = `${item.name}. `;
+                let poporText = (item.popor && item.popor !== '-') ? `nomor popor ${item.popor}` : '';
+                let holderText = (item.holder && item.holder !== '-') ? `atas nama ${item.holder}` : '';
+                let ttsText = "";
 
                 if (isRapidScanMode) {
                     if(mainContent) mainContent.classList.add(isMasuk ? 'flash-in' : 'flash-out'); playBeep(isMasuk ? 'IN' : 'OUT');
-                    if (isMasuk) { ttsText += "Telah dikembalikan."; } else { ttsText += "Dikeluarkan."; }
+                    if (isMasuk) { 
+                        ttsText = `${item.name} ${holderText} ${poporText} telah kembali ke gudang.`; 
+                    } else { 
+                        ttsText = `${item.name} ${holderText} ${poporText} telah keluar gudang.`; 
+                    }
                 } else {
                     if(isMasuk) {
                         if(feedback) feedback.className = "mt-6 p-4 md:p-6 rounded-[24px] border-emerald-600 bg-emerald-950/30 border-2 flex items-center gap-4 md:gap-6 animate-in fade-in zoom-in duration-300 bg-carbon hud-card w-full";
@@ -856,16 +862,18 @@
                         if(fTitle) { fTitle.className = "text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1"; fTitle.innerText = "PENGEMBALIAN ASET KE GUDANG"; }
                         if(fDesc) { fDesc.className = "font-black text-sm md:text-xl text-emerald-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor] truncate"; fDesc.innerText = item.name;}
                         if(mainContent) mainContent.classList.add('flash-in'); playBeep('IN'); 
-                        ttsText += "Telah dikembalikan dan diamankan di gudang.";
+                        ttsText = `${item.name} ${holderText} ${poporText} telah kembali ke gudang.`;
                     } else {
                         if(feedback) feedback.className = "mt-6 p-4 md:p-6 rounded-[24px] border-orange-500 bg-orange-950/30 border-2 flex items-center gap-4 md:gap-6 animate-in fade-in zoom-in duration-300 bg-carbon hud-card hud-orange w-full";
                         if(iconBox) { iconBox.className = "w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-orange-900/50 cyber-cut"; iconBox.innerHTML = `<i data-lucide="arrow-up-from-line" class="w-6 h-6 md:w-8 md:h-8 text-white"></i>`; }
                         if(fTitle) { fTitle.className = "text-[9px] md:text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1"; fTitle.innerText = `PEMINJAMAN ASET (OP: ${adminName})`; }
                         if(fDesc) { fDesc.className = "font-black text-sm md:text-xl text-orange-400 uppercase leading-tight drop-shadow-[0_0_5px_currentColor] truncate"; fDesc.innerText = item.name;}
                         if(mainContent) mainContent.classList.add('flash-out'); playBeep('OUT'); 
-                        ttsText += (item.holder && item.holder !== '-') ? `Telah dipinjamkan kepada ${item.holder}. Operator yang bertugas, ${adminName}.` : `Telah dikeluarkan dari gudang. Operator yang bertugas, ${adminName}.`;
+                        ttsText = `${item.name} ${holderText} ${poporText} telah keluar gudang.`;
                     }
                 }
+                
+                ttsText = ttsText.replace(/\s+/g, ' ').trim();
                 speakText(ttsText);
             } else {
                 speakText("Peringatan! Kode Barcode tidak dikenal oleh sistem.");
