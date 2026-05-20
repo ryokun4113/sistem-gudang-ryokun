@@ -349,7 +349,12 @@
         let APPS_SCRIPT_URL = localStorage.getItem('ryokun_gs_url') || 'https://script.google.com/macros/s/AKfycbyTgTsHmJoXgNv8Nvqh8m7I5vDgGQWqtYccnLXL7X9AidxuX4kqRVxHokjyAw8ZPMz0/exec'; 
         let inventory = JSON.parse(localStorage.getItem('ryo_inventory')) || [];
         let mutationLogs = JSON.parse(localStorage.getItem('ryo_logs')) || [];
-        let users = JSON.parse(localStorage.getItem('ryo_users')) || [{ username: 'RYO KUN', password: '123', role: 'superadmin' }];
+        
+        // PERLINDUNGAN SUPERADMIN: Jika array kosong (misalnya karena tertimpa spreadsheet yg masih fresh), otomatis buat kembali.
+        let users = JSON.parse(localStorage.getItem('ryo_users'));
+        if (!users || users.length === 0) {
+            users = [{ username: 'RYO KUN', password: '123', role: 'superadmin' }];
+        }
         
         let appSettings = JSON.parse(localStorage.getItem('ryo_settings')) || { 
             overdueLimitHours: 24, 
@@ -456,14 +461,16 @@
             if(typeof triggerDroneMessage === 'function') { if(manual || showSyncAlert) triggerDroneMessage("SINKRONISASI DATABASE UTAMA...", "info"); }
             
             try {
-                // Tarik data dari Spreadsheet (Master)
                 const response = await fetch(APPS_SCRIPT_URL + "?action=getData");
                 const cloudData = await response.json();
                 
                 if(cloudData && cloudData.inventory) {
                     inventory = cloudData.inventory;
                     if(cloudData.logs) mutationLogs = cloudData.logs;
-                    if(cloudData.users) users = cloudData.users;
+                    
+                    if(cloudData.users && cloudData.users.length > 0) {
+                        users = cloudData.users;
+                    }
                     
                     localStorage.setItem('ryo_inventory', JSON.stringify(inventory));
                     localStorage.setItem('ryo_logs', JSON.stringify(mutationLogs));
@@ -478,7 +485,6 @@
                     if(manual) { closeDatabaseSettings(); if(typeof triggerDroneMessage === 'function') setTimeout(() => triggerDroneMessage("DATABASE CLOUD SYNC BERHASIL", "success"), 1000); showAlert("SINKRONISASI CLOUD BERHASIL!\nData sistem telah diperbarui mengikuti Spreadsheet utama."); } else if (showSyncAlert) { showAlert("DATA BERHASIL DISINKRONKAN KE SPREADSHEET!"); }
                 }
                 
-                // Kirim perubahan lokal ke Spreadsheet (termasuk users)
                 if(manual === false) {
                     await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'sync', inventory: inventory, logs: mutationLogs, users: users }) });
                 }
