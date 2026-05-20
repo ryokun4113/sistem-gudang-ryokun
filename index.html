@@ -248,7 +248,7 @@
                 <p class="text-[10px] text-emerald-500 font-bold uppercase mb-3 tracking-widest flex items-center gap-2"><i data-lucide="table" class="w-4 h-4"></i> Google Apps Script URL</p>
                 <p class="text-[9px] text-slate-400 mb-4 font-mono leading-relaxed">Masukkan URL Web App dari Google Script Anda agar data dapat di-backup ke Google Sheets secara otomatis.</p>
                 <input type="text" id="db-script-url" class="w-full bg-[#020617] border border-slate-700 p-4 rounded-xl text-white font-mono text-xs outline-none focus:border-emerald-500 mb-4" placeholder="https://script.google.com/macros/s/...">
-                <button onclick="syncToGoogleSheets(true)" class="btn-interact cyber-cut w-full py-4 bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/20">Simpan & Sinkronkan</button>
+                <button onclick="syncToGoogleSheets('pull', true)" class="btn-interact cyber-cut w-full py-4 bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/20">Simpan & Sinkronkan</button>
             </div>
         </div>
     </div>
@@ -350,7 +350,6 @@
         let inventory = JSON.parse(localStorage.getItem('ryo_inventory')) || [];
         let mutationLogs = JSON.parse(localStorage.getItem('ryo_logs')) || [];
         
-        // PERLINDUNGAN SUPERADMIN: Jika array kosong (misalnya karena tertimpa spreadsheet yg masih fresh), otomatis buat kembali.
         let users = JSON.parse(localStorage.getItem('ryo_users'));
         if (!users || users.length === 0) {
             users = [{ username: 'RYO KUN', password: '123', role: 'superadmin' }];
@@ -370,10 +369,19 @@
         let itemToDelete = null; let itemToEdit = null; let currentInventorySort = 'newest';
 
         async function save(showSyncAlert = false) {
-            localStorage.setItem('ryo_inventory', JSON.stringify(inventory)); localStorage.setItem('ryo_logs', JSON.stringify(mutationLogs)); localStorage.setItem('ryo_users', JSON.stringify(users)); localStorage.setItem('ryo_settings', JSON.stringify(appSettings));
+            localStorage.setItem('ryo_inventory', JSON.stringify(inventory)); 
+            localStorage.setItem('ryo_logs', JSON.stringify(mutationLogs)); 
+            localStorage.setItem('ryo_users', JSON.stringify(users)); 
+            localStorage.setItem('ryo_settings', JSON.stringify(appSettings));
             if(currentUser) sessionStorage.setItem('ryokun_currentUser', JSON.stringify(currentUser)); else sessionStorage.removeItem('ryokun_currentUser');
             updateNetworkUI();
-            if(navigator.onLine && APPS_SCRIPT_URL) { await syncToGoogleSheets(false, showSyncAlert); } else if (showSyncAlert) { showAlert("DATA BERHASIL DISIMPAN KE LOKAL (MODE OFFLINE / CLOUD BELUM DIATUR)"); }
+            
+            if(navigator.onLine && APPS_SCRIPT_URL) { 
+                await syncToGoogleSheets('push', false); 
+                if(showSyncAlert) showAlert("DATA BERHASIL DISIMPAN & DISINKRONKAN KE SPREADSHEET!");
+            } else if (showSyncAlert) { 
+                showAlert("DATA BERHASIL DISIMPAN LOKAL (MODE OFFLINE)"); 
+            }
         }
 
         window.triggerDroneMessage = function(msg, type) {
@@ -453,46 +461,70 @@
             else if(status === 'failed') { dbText.innerText = "SYNC FAILED"; dbText.className = "text-[9px] font-black text-red-500 uppercase tracking-widest font-mono"; dbDot.className = "status-dot bg-red-500 text-red-500 animate-pulse"; }
         }
 
-        async function syncToGoogleSheets(manual = false, showSyncAlert = false) {
-            if(manual) { const url = document.getElementById('db-script-url').value.trim(); if(url) { APPS_SCRIPT_URL = url; localStorage.setItem('ryokun_gs_url', url); } }
-            if(!APPS_SCRIPT_URL) { setDBStatus('local'); if(manual) { closeDatabaseSettings(); showAlert("Harap Masukkan URL Web App Google Script Anda terlebih dahulu.\n(Data sementara disimpan lokal)"); } else if(showSyncAlert) { showAlert("DATA BERHASIL DISIMPAN KE LOKAL (URL SPREADSHEET BELUM DIATUR)"); } return; }
-            if(!navigator.onLine) { setDBStatus('local'); if(manual) { closeDatabaseSettings(); showAlert("Koneksi Internet Terputus!\nData saat ini hanya disimpan di Perangkat Lokal (Offline)."); } else if(showSyncAlert) showAlert("DATA BERHASIL DISIMPAN KE LOKAL (MODE OFFLINE)"); return; }
+        async function syncToGoogleSheets(mode = 'push', isManual = false) {
+            if(isManual && mode === 'pull') { 
+                const url = document.getElementById('db-script-url').value.trim(); 
+                if(url) { APPS_SCRIPT_URL = url; localStorage.setItem('ryokun_gs_url', url); } 
+            }
+
+            if(!APPS_SCRIPT_URL) { 
+                setDBStatus('local'); 
+                if(isManual) { closeDatabaseSettings(); showAlert("Harap Masukkan URL Web App Google Script Anda terlebih dahulu."); } 
+                return; 
+            }
             
-            if(typeof triggerDroneMessage === 'function') { if(manual || showSyncAlert) triggerDroneMessage("SINKRONISASI DATABASE UTAMA...", "info"); }
-            
+            if(!navigator.onLine) { 
+                setDBStatus('local'); 
+                if(isManual) { closeDatabaseSettings(); showAlert("Koneksi Internet Terputus! Berjalan dalam Mode Offline."); } 
+                return; 
+            }
+
             try {
-                const response = await fetch(APPS_SCRIPT_URL + "?action=getData");
-                const cloudData = await response.json();
-                
-                if(cloudData && cloudData.inventory) {
-                    inventory = cloudData.inventory;
-                    if(cloudData.logs) mutationLogs = cloudData.logs;
+                if (mode === 'pull') {
+                    if(typeof triggerDroneMessage === 'function' && isManual) triggerDroneMessage("MENARIK DATA DARI SPREADSHEET...", "info");
                     
-                    if(cloudData.users && cloudData.users.length > 0) {
-                        users = cloudData.users;
+                    const response = await fetch(APPS_SCRIPT_URL + "?action=getData");
+                    const cloudData = await response.json();
+                    
+                    if(cloudData && cloudData.status === 'success') {
+                        const isCloudEmpty = (!cloudData.inventory || cloudData.inventory.length === 0);
+                        const isLocalHasData = (inventory.length > 0);
+                        
+                        if (isCloudEmpty && isLocalHasData) {
+                            await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'sync', inventory: inventory, logs: mutationLogs, users: users, settings: appSettings }) });
+                            if(isManual) { closeDatabaseSettings(); showAlert("Spreadsheet baru/kosong terdeteksi!\\nSistem berhasil mendorong Data Lokal ke Spreadsheet."); }
+                            setDBStatus('synced');
+                            return;
+                        }
+
+                        if(cloudData.inventory) inventory = cloudData.inventory;
+                        if(cloudData.logs) mutationLogs = cloudData.logs;
+                        if(cloudData.users && cloudData.users.length > 0) users = cloudData.users;
+                        
+                        localStorage.setItem('ryo_inventory', JSON.stringify(inventory));
+                        localStorage.setItem('ryo_logs', JSON.stringify(mutationLogs));
+                        localStorage.setItem('ryo_users', JSON.stringify(users));
+                        
+                        setDBStatus('synced');
+                        
+                        if(currentActiveTab === 'inventory') renderInventory();
+                        else if(currentActiveTab === 'dashboard') renderDashboard();
+                        else if(currentActiveTab === 'users') renderUsersManagement();
+                        
+                        if(isManual) { 
+                            closeDatabaseSettings(); 
+                            if(typeof triggerDroneMessage === 'function') setTimeout(() => triggerDroneMessage("DATABASE CLOUD SYNC BERHASIL", "success"), 1000); 
+                            showAlert("SINKRONISASI CLOUD BERHASIL!\\nData ditarik mengikuti Spreadsheet utama."); 
+                        }
                     }
-                    
-                    localStorage.setItem('ryo_inventory', JSON.stringify(inventory));
-                    localStorage.setItem('ryo_logs', JSON.stringify(mutationLogs));
-                    localStorage.setItem('ryo_users', JSON.stringify(users));
-                    
+                } else if (mode === 'push') {
+                    await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'sync', inventory: inventory, logs: mutationLogs, users: users, settings: appSettings }) });
                     setDBStatus('synced');
-                    
-                    if(currentActiveTab === 'inventory') renderInventory();
-                    else if(currentActiveTab === 'dashboard') renderDashboard();
-                    else if(currentActiveTab === 'users') renderUsersManagement();
-                    
-                    if(manual) { closeDatabaseSettings(); if(typeof triggerDroneMessage === 'function') setTimeout(() => triggerDroneMessage("DATABASE CLOUD SYNC BERHASIL", "success"), 1000); showAlert("SINKRONISASI CLOUD BERHASIL!\nData sistem telah diperbarui mengikuti Spreadsheet utama."); } else if (showSyncAlert) { showAlert("DATA BERHASIL DISINKRONKAN KE SPREADSHEET!"); }
                 }
-                
-                if(manual === false) {
-                    await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'sync', inventory: inventory, logs: mutationLogs, users: users }) });
-                }
-                
             } catch(e) { 
                 setDBStatus('failed'); 
-                if(typeof triggerDroneMessage === 'function') triggerDroneMessage("GAGAL MENGHUBUNGI SPREADSHEET", "error"); 
-                if(manual || showSyncAlert) { showAlert("SINKRONISASI ONLINE GAGAL!\nPastikan URL Web App Google Script Anda benar dan koneksi internet stabil."); }
+                if(typeof triggerDroneMessage === 'function' && isManual) triggerDroneMessage("GAGAL MENGHUBUNGI SPREADSHEET", "error"); 
+                if(isManual) { showAlert("SINKRONISASI ONLINE GAGAL!\\nPastikan URL Web App Google Script Anda benar dan koneksi internet stabil."); }
             }
         }
 
@@ -503,7 +535,7 @@
                 netDot.className = "status-dot bg-emerald-500 text-emerald-500"; netText.innerText = "ONLINE"; netText.className = "text-[9px] font-black text-emerald-500 uppercase tracking-widest font-mono";
                 if(eye) { eye.className = 'w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-300 ai-core-active bg-cyan-400 text-cyan-400'; eye.style.boxShadow = ''; }
                 rings.forEach(r => { r.style.borderColor = ''; if (r.classList.contains('border-t-cyan-400')) { r.style.borderBottomColor = 'transparent'; r.style.borderLeftColor = 'transparent'; } });
-                if(APPS_SCRIPT_URL) syncToGoogleSheets(false, false); else setDBStatus('local');
+                if(APPS_SCRIPT_URL) syncToGoogleSheets('push', false); else setDBStatus('local');
             } else {
                 netDot.className = "status-dot bg-red-500 text-red-500 animate-pulse"; netText.innerText = "OFFLINE (LOCAL MODE)"; netText.className = "text-[9px] font-black text-red-500 uppercase tracking-widest font-mono";
                 if(eye) { eye.className = 'w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-300 ai-core-active bg-red-500 text-red-500'; eye.style.boxShadow = '0 0 15px rgba(239,68,68,0.8)'; }
@@ -652,7 +684,6 @@
             const inItems = inventory.filter(i => i.status === 'Di Gudang'); const outItems = inventory.filter(i => i.status === 'Keluar'); const limit = appSettings.overdueLimitHours || 24;
             const overdueItems = outItems.filter(item => { const outLog = mutationLogs.find(log => String(log.id) === String(item.id) && log.status === 'Keluar'); if (outLog && outLog.timestamp) { return ((Date.now() - outLog.timestamp) / (1000 * 60 * 60)) >= limit; } return false; });
             
-            // HTML untuk alarm (dipindah ke atas)
             const overdueItemsHtml = overdueItems.length > 0 ? `<div class="bg-red-950/40 border-2 border-red-600/50 rounded-[40px] p-6 md:p-8 shadow-xl overdue-pulse warning-pulse hud-card hud-red mb-6"><div class="flex justify-between items-center mb-6"><h3 class="text-xs md:text-sm font-black text-red-500 uppercase flex items-center gap-3 tracking-widest leading-relaxed"><i data-lucide="siren" class="w-6 h-6 shrink-0"></i> PERINGATAN KRITIS: ${overdueItems.length} ASET JATUH TEMPO (> ${limit} JAM)</h3></div><div class="flex overflow-x-auto custom-scrollbar gap-4 pb-4">${overdueItems.map(item => `<div class="bg-red-900/20 border border-red-500/50 rounded-3xl p-5 min-w-[200px] md:min-w-[240px] shrink-0 shadow-lg bg-carbon"><div class="flex justify-between items-start mb-2"><p class="text-[10px] font-mono text-red-400 font-bold">${item.id}</p><span class="bg-red-600 text-white text-[8px] px-2 py-1 rounded font-black uppercase tracking-widest">OVERDUE</span></div><p class="text-sm font-black text-white uppercase truncate" title="${item.name}">${item.name}</p><p class="text-[9px] font-bold text-red-300 mt-3 uppercase tracking-widest">Peminjam / Pemegang:</p><p class="text-xs font-medium text-white capitalize truncate mt-1">${item.holder}</p></div>`).join('')}</div></div>` : '';
             const outstandingItemsHtml = outItems.length > 0 ? `<div class="bg-orange-950/20 border border-orange-900/50 rounded-[40px] p-6 md:p-8 shadow-xl warning-pulse hud-card hud-orange mb-6"><h3 class="text-xs md:text-sm font-black text-orange-500 uppercase flex items-center gap-3 mb-6 tracking-widest leading-relaxed"><i data-lucide="alert-triangle" class="w-5 h-5 shrink-0"></i> Peringatan: ${outItems.length} Aset Sedang Dipinjam (Belum Kembali)</h3><div class="flex overflow-x-auto custom-scrollbar gap-4 pb-4">${outItems.map(item => `<div class="bg-[#020617] border border-orange-900/30 rounded-3xl p-5 min-w-[200px] md:min-w-[240px] shrink-0 hover:border-orange-500 transition-colors shadow-lg bg-carbon"><div class="flex justify-between items-start mb-2"><p class="text-[10px] font-mono text-orange-500 font-bold">${item.id}</p><span class="bg-orange-900/50 text-orange-400 text-[8px] px-2 py-1 rounded font-black uppercase tracking-widest">OUT</span></div><p class="text-sm font-black text-white uppercase truncate" title="${item.name}">${item.name}</p><p class="text-[9px] font-bold text-slate-500 mt-3 uppercase tracking-widest">Peminjam / Pemegang:</p><p class="text-xs font-medium text-slate-300 capitalize truncate mt-1">${item.holder}</p></div>`).join('')}</div></div>` : `<div class="bg-emerald-950/20 border border-emerald-900/50 rounded-[40px] p-6 md:p-8 shadow-xl flex items-center gap-4 hud-card mb-6"><i data-lucide="shield-check" class="w-8 h-8 text-emerald-500 shrink-0"></i><div><h3 class="text-xs md:text-sm font-black text-emerald-500 uppercase tracking-widest">Kondisi Gudang Terkendali</h3><p class="text-[9px] md:text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mt-1">Seluruh aset terdaftar saat ini berada di dalam penyimpanan (Aman).</p></div></div>`;
 
@@ -672,7 +703,7 @@
                             <button onclick="backupSystem()" class="btn-interact cyber-cut flex-1 md:flex-none items-center justify-center gap-2 bg-purple-600/20 text-purple-400 px-4 py-3 font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-purple-600 hover:text-white transition-all border border-purple-900/50"><i data-lucide="database" class="w-4 h-4"></i> Backup DB</button>
                             <button onclick="triggerRestore()" class="btn-interact cyber-cut flex-1 md:flex-none items-center justify-center gap-2 bg-pink-600/20 text-pink-400 px-4 py-3 font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-pink-600 hover:text-white transition-all border border-pink-900/50"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Restore DB</button>
                             <input type="file" id="json-import-file" class="hidden" accept=".json" onchange="restoreSystem(event)">
-                            <button onclick="syncToGoogleSheets(true)" class="btn-interact cyber-cut flex-1 md:flex-none items-center justify-center gap-2 bg-cyan-600/20 text-cyan-500 px-4 py-3 font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-cyan-600 hover:text-white transition-all border border-cyan-900/50"><i data-lucide="cloud-upload" class="w-4 h-4"></i> Sync Cloud</button>
+                            <button onclick="syncToGoogleSheets('pull', true)" class="btn-interact cyber-cut flex-1 md:flex-none items-center justify-center gap-2 bg-cyan-600/20 text-cyan-500 px-4 py-3 font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-cyan-600 hover:text-white transition-all border border-cyan-900/50"><i data-lucide="cloud-upload" class="w-4 h-4"></i> Sync Cloud</button>
                             <button onclick="openBotSettings()" class="btn-interact cyber-cut flex-1 md:flex-none items-center justify-center gap-2 bg-purple-600/20 text-purple-400 px-4 py-3 font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-purple-600 hover:text-white transition-all border border-purple-900/50"><i data-lucide="message-square" class="w-4 h-4"></i> Setup Bot</button>
                         </div>
                     </div>
@@ -1367,7 +1398,7 @@
 
         window.onload = () => {
             lucide.createIcons(); startClock(); setupActivityListeners(); updateNetworkUI(); startAIMonitoring(); 
-            if(navigator.onLine && APPS_SCRIPT_URL) syncToGoogleSheets();
+            if(navigator.onLine && APPS_SCRIPT_URL) syncToGoogleSheets('pull', false);
             if(currentUser) { showApp(); } else { runBootSequence(); }
         };
     </script>
