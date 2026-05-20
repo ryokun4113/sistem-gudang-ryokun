@@ -346,7 +346,7 @@
     </div>
 
     <script>
-        let APPS_SCRIPT_URL = localStorage.getItem('ryokun_gs_url') || ''; 
+        let APPS_SCRIPT_URL = localStorage.getItem('ryokun_gs_url') || 'https://script.google.com/macros/s/AKfycbyTgTsHmJoXgNv8Nvqh8m7I5vDgGQWqtYccnLXL7X9AidxuX4kqRVxHokjyAw8ZPMz0/exec'; 
         let inventory = JSON.parse(localStorage.getItem('ryo_inventory')) || [];
         let mutationLogs = JSON.parse(localStorage.getItem('ryo_logs')) || [];
         let users = JSON.parse(localStorage.getItem('ryo_users')) || [{ username: 'SUPERADMIN', password: '123', role: 'superadmin' }, { username: 'ADMIN', password: '123', role: 'admin' }];
@@ -452,11 +452,37 @@
             if(manual) { const url = document.getElementById('db-script-url').value.trim(); if(url) { APPS_SCRIPT_URL = url; localStorage.setItem('ryokun_gs_url', url); } }
             if(!APPS_SCRIPT_URL) { setDBStatus('local'); if(manual) { closeDatabaseSettings(); showAlert("Harap Masukkan URL Web App Google Script Anda terlebih dahulu.\n(Data sementara disimpan lokal)"); } else if(showSyncAlert) { showAlert("DATA BERHASIL DISIMPAN KE LOKAL (URL SPREADSHEET BELUM DIATUR)"); } return; }
             if(!navigator.onLine) { setDBStatus('local'); if(manual) { closeDatabaseSettings(); showAlert("Koneksi Internet Terputus!\nData saat ini hanya disimpan di Perangkat Lokal (Offline)."); } else if(showSyncAlert) showAlert("DATA BERHASIL DISIMPAN KE LOKAL (MODE OFFLINE)"); return; }
-            if(typeof triggerDroneMessage === 'function') { if(manual || showSyncAlert) triggerDroneMessage("MEMULAI SINKRONISASI CLOUD...", "info"); }
+            
+            if(typeof triggerDroneMessage === 'function') { if(manual || showSyncAlert) triggerDroneMessage("SINKRONISASI DATABASE UTAMA...", "info"); }
+            
             try {
-                await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'sync', inventory: inventory, logs: mutationLogs }) });
-                setDBStatus('synced'); if(manual) { closeDatabaseSettings(); if(typeof triggerDroneMessage === 'function') setTimeout(() => triggerDroneMessage("DATABASE CLOUD SYNC BERHASIL", "success"), 1000); showAlert("INTEGRASI BERHASIL!\nURL tersimpan dan data telah berhasil disinkronkan ke Google Sheets."); } else if(showSyncAlert) { showAlert("DATA BERHASIL DISINKRONKAN KE SPREADSHEET!"); }
-            } catch(e) { setDBStatus('failed'); if(typeof triggerDroneMessage === 'function') triggerDroneMessage("GAGAL MENGHUBUNGI DATABASE CLOUD", "error"); if(manual || showSyncAlert) { showAlert("SINKRONISASI ONLINE GAGAL!\nPastikan URL Web App Google Script Anda benar dan koneksi internet stabil."); } }
+                const response = await fetch(APPS_SCRIPT_URL + "?action=getData");
+                const cloudData = await response.json();
+                
+                if(cloudData && cloudData.inventory) {
+                    inventory = cloudData.inventory;
+                    if(cloudData.logs) mutationLogs = cloudData.logs;
+                    
+                    localStorage.setItem('ryo_inventory', JSON.stringify(inventory));
+                    localStorage.setItem('ryo_logs', JSON.stringify(mutationLogs));
+                    
+                    setDBStatus('synced');
+                    
+                    if(currentActiveTab === 'inventory') renderInventory();
+                    else if(currentActiveTab === 'dashboard') renderDashboard();
+                    
+                    if(manual) { closeDatabaseSettings(); if(typeof triggerDroneMessage === 'function') setTimeout(() => triggerDroneMessage("DATABASE CLOUD SYNC BERHASIL", "success"), 1000); showAlert("SINKRONISASI CLOUD BERHASIL!\nData sistem telah diperbarui mengikuti Spreadsheet utama."); } else if (showSyncAlert) { showAlert("DATA BERHASIL DISINKRONKAN KE SPREADSHEET!"); }
+                }
+                
+                if(manual === false) {
+                    await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'sync', inventory: inventory, logs: mutationLogs }) });
+                }
+                
+            } catch(e) { 
+                setDBStatus('failed'); 
+                if(typeof triggerDroneMessage === 'function') triggerDroneMessage("GAGAL MENGHUBUNGI SPREADSHEET", "error"); 
+                if(manual || showSyncAlert) { showAlert("SINKRONISASI ONLINE GAGAL!\nPastikan URL Web App Google Script Anda benar dan koneksi internet stabil."); }
+            }
         }
 
         function updateNetworkUI() {
@@ -1318,6 +1344,7 @@
 
         window.onload = () => {
             lucide.createIcons(); startClock(); setupActivityListeners(); updateNetworkUI(); startAIMonitoring(); 
+            if(navigator.onLine && APPS_SCRIPT_URL) syncToGoogleSheets();
             if(currentUser) { showApp(); } else { runBootSequence(); }
         };
     </script>
