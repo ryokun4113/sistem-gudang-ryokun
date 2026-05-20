@@ -278,13 +278,28 @@
     <div id="overdue-modal" class="hidden fixed inset-0 z-[5000] flex items-center justify-center p-4 modal-backdrop bg-black/80 backdrop-blur-sm">
         <div class="glass-effect bg-carbon w-full max-w-sm rounded-[40px] border p-8 shadow-2xl text-center hologram-sweep-red hud-card hud-red">
             <div class="w-16 h-16 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-red-500/50 cyber-cut"><i data-lucide="bell-ring" class="w-8 h-8 text-red-500"></i></div>
-            <h3 class="text-xl font-black text-white uppercase italic mb-2"><span class="text-red-500/50 mr-2">[</span>Setel Alarm Peminjaman<span class="text-red-500/50 ml-2">]</span></h3>
-            <p class="text-[10px] text-slate-400 font-bold uppercase mb-6 tracking-widest leading-relaxed">Batas waktu maksimal peminjaman aset sebelum alarm merah menyala.</p>
+            <h3 class="text-xl font-black text-white uppercase italic mb-2"><span class="text-red-500/50 mr-2">[</span>Setel Alarm Global<span class="text-red-500/50 ml-2">]</span></h3>
+            <p class="text-[10px] text-slate-400 font-bold uppercase mb-6 tracking-widest leading-relaxed">Batas waktu maksimal peminjaman aset sebelum alarm merah menyala secara keseluruhan.</p>
             <input type="number" id="overdue-input" class="w-full bg-[#020617]/80 border border-slate-800 p-4 rounded-2xl text-white font-black text-xl outline-none uppercase text-center focus:border-red-500 transition-colors mb-6 caret-red-500" placeholder="24" min="1">
             <div class="flex gap-4">
                 <button onclick="closeOverdueSetting()" class="btn-interact flex-1 py-4 rounded-2xl font-black text-slate-400 uppercase tracking-widest bg-slate-800 hover:bg-slate-700 transition-all">Batal</button>
                 <button onclick="saveOverdueSetting()" class="btn-interact cyber-cut flex-1 py-4 font-black text-white uppercase tracking-widest bg-red-600 hover:bg-red-500 transition-all shadow-lg shadow-red-900/20">Simpan</button>
             </div>
+        </div>
+    </div>
+
+    <div id="individual-overdue-modal" class="hidden fixed inset-0 z-[5000] flex items-center justify-center p-4 modal-backdrop bg-black/80 backdrop-blur-sm">
+        <div class="glass-effect bg-carbon w-full max-w-sm rounded-[40px] border p-8 shadow-2xl text-center hologram-sweep-orange hud-card hud-orange">
+            <div class="w-16 h-16 bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-orange-500/50 cyber-cut"><i data-lucide="alarm-clock" class="w-8 h-8 text-orange-500"></i></div>
+            <h3 class="text-xl font-black text-white uppercase italic mb-2"><span class="text-orange-500/50 mr-2">[</span>Setel Alarm Individual<span class="text-orange-500/50 ml-2">]</span></h3>
+            <p id="individual-overdue-name" class="text-[12px] text-white font-black uppercase mb-1 tracking-widest leading-relaxed"></p>
+            <p class="text-[10px] text-slate-400 font-bold uppercase mb-6 tracking-widest leading-relaxed">Atur batas waktu peminjaman khusus untuk aset ini (Jam).</p>
+            <input type="number" id="individual-overdue-input" class="w-full bg-[#020617]/80 border border-slate-800 p-4 rounded-2xl text-white font-black text-xl outline-none uppercase text-center focus:border-orange-500 transition-colors mb-6 caret-orange-500" placeholder="24" min="1">
+            <div class="flex gap-2">
+                <button onclick="resetIndividualOverdue()" class="btn-interact flex-1 py-4 rounded-2xl font-black text-slate-400 text-[10px] uppercase tracking-widest bg-slate-800 hover:bg-slate-700 transition-all">Gunakan Global</button>
+                <button onclick="saveIndividualOverdue()" class="btn-interact cyber-cut flex-1 py-4 font-black text-white text-[10px] uppercase tracking-widest bg-orange-600 hover:bg-orange-500 transition-all shadow-lg shadow-orange-900/20">Simpan Alarm</button>
+            </div>
+            <button onclick="closeIndividualOverdue()" class="w-full mt-4 btn-interact py-3 rounded-2xl font-black text-slate-500 text-[9px] uppercase tracking-widest hover:text-white transition-all border border-slate-800">Batal / Tutup</button>
         </div>
     </div>
 
@@ -366,7 +381,7 @@
 
         let currentUser = sessionStorage.getItem('ryokun_currentUser') ? JSON.parse(sessionStorage.getItem('ryokun_currentUser')) : null;
         let currentActiveTab = ''; let isRapidScanMode = false; let chartActivity = null; let chartTopItems = null; let currentSessionName = ''; let isOpnameActive = false; let opnameData = { expected: [], scanned: [], extra: [], out: [] };
-        let itemToDelete = null; let itemToEdit = null; let currentInventorySort = 'newest';
+        let itemToDelete = null; let itemToEdit = null; let currentInventorySort = 'newest'; let currentIndividualAlarmId = null;
 
         async function save(showSyncAlert = false) {
             localStorage.setItem('ryo_inventory', JSON.stringify(inventory)); 
@@ -629,6 +644,46 @@
             }
         };
 
+        window.openIndividualOverdue = function(id) {
+            const item = inventory.find(i => String(i.id) === String(id));
+            if (!item) return;
+            currentIndividualAlarmId = id;
+            document.getElementById('individual-overdue-name').innerText = item.name;
+            document.getElementById('individual-overdue-input').value = item.customOverdueHours || appSettings.overdueLimitHours || 24;
+            document.getElementById('individual-overdue-modal').classList.remove('hidden');
+        };
+        window.closeIndividualOverdue = function() {
+            currentIndividualAlarmId = null;
+            document.getElementById('individual-overdue-modal').classList.add('hidden');
+        };
+        window.saveIndividualOverdue = function() {
+            if (!currentIndividualAlarmId) return;
+            const val = parseInt(document.getElementById('individual-overdue-input').value);
+            if (val > 0) {
+                const itemIndex = inventory.findIndex(i => String(i.id) === String(currentIndividualAlarmId));
+                if (itemIndex > -1) {
+                    inventory[itemIndex].customOverdueHours = val;
+                    save(false);
+                    closeIndividualOverdue();
+                    renderDashboard();
+                    showAlert("BERHASIL! Alarm khusus untuk aset ini diatur menjadi " + val + " Jam.");
+                }
+            } else {
+                showAlert("ERROR: Masukkan angka jam yang valid (Minimal 1)!");
+            }
+        };
+        window.resetIndividualOverdue = function() {
+            if (!currentIndividualAlarmId) return;
+            const itemIndex = inventory.findIndex(i => String(i.id) === String(currentIndividualAlarmId));
+            if (itemIndex > -1) {
+                delete inventory[itemIndex].customOverdueHours;
+                save(false);
+                closeIndividualOverdue();
+                renderDashboard();
+                showAlert("BERHASIL! Alarm dikembalikan mengikuti pengaturan Global.");
+            }
+        };
+
         function initCharts() {
             Chart.defaults.color = '#94a3b8'; Chart.defaults.font.family = 'Inter';
             const last7Days = Array.from({length: 7}, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return d.toLocaleDateString('id-ID'); });
@@ -682,16 +737,16 @@
 
         function renderDashboard() {
             const inItems = inventory.filter(i => i.status === 'Di Gudang'); const outItems = inventory.filter(i => i.status === 'Keluar'); const limit = appSettings.overdueLimitHours || 24;
-            const overdueItems = outItems.filter(item => { const outLog = mutationLogs.find(log => String(log.id) === String(item.id) && log.status === 'Keluar'); if (outLog && outLog.timestamp) { return ((Date.now() - outLog.timestamp) / (1000 * 60 * 60)) >= limit; } return false; });
+            const overdueItems = outItems.filter(item => { const outLog = mutationLogs.find(log => String(log.id) === String(item.id) && log.status === 'Keluar'); if (outLog && outLog.timestamp) { const activeLimit = item.customOverdueHours ? item.customOverdueHours : limit; return ((Date.now() - outLog.timestamp) / (1000 * 60 * 60)) >= activeLimit; } return false; });
             
-            const overdueItemsHtml = overdueItems.length > 0 ? `<div class="bg-red-950/40 border-2 border-red-600/50 rounded-[40px] p-6 md:p-8 shadow-xl overdue-pulse warning-pulse hud-card hud-red mb-6"><div class="flex justify-between items-center mb-6"><h3 class="text-xs md:text-sm font-black text-red-500 uppercase flex items-center gap-3 tracking-widest leading-relaxed"><i data-lucide="siren" class="w-6 h-6 shrink-0"></i> PERINGATAN KRITIS: ${overdueItems.length} ASET JATUH TEMPO (> ${limit} JAM)</h3></div><div class="flex overflow-x-auto custom-scrollbar gap-4 pb-4">${overdueItems.map(item => `<div class="bg-red-900/20 border border-red-500/50 rounded-3xl p-5 min-w-[200px] md:min-w-[240px] shrink-0 shadow-lg bg-carbon"><div class="flex justify-between items-start mb-2"><p class="text-[10px] font-mono text-red-400 font-bold">${item.id}</p><span class="bg-red-600 text-white text-[8px] px-2 py-1 rounded font-black uppercase tracking-widest">OVERDUE</span></div><p class="text-sm font-black text-white uppercase truncate" title="${item.name}">${item.name}</p><p class="text-[9px] font-bold text-red-300 mt-3 uppercase tracking-widest">Peminjam / Pemegang:</p><p class="text-xs font-medium text-white capitalize truncate mt-1">${item.holder}</p></div>`).join('')}</div></div>` : '';
-            const outstandingItemsHtml = outItems.length > 0 ? `<div class="bg-orange-950/20 border border-orange-900/50 rounded-[40px] p-6 md:p-8 shadow-xl warning-pulse hud-card hud-orange mb-6"><h3 class="text-xs md:text-sm font-black text-orange-500 uppercase flex items-center gap-3 mb-6 tracking-widest leading-relaxed"><i data-lucide="alert-triangle" class="w-5 h-5 shrink-0"></i> Peringatan: ${outItems.length} Aset Sedang Dipinjam (Belum Kembali)</h3><div class="flex overflow-x-auto custom-scrollbar gap-4 pb-4">${outItems.map(item => `<div class="bg-[#020617] border border-orange-900/30 rounded-3xl p-5 min-w-[200px] md:min-w-[240px] shrink-0 hover:border-orange-500 transition-colors shadow-lg bg-carbon"><div class="flex justify-between items-start mb-2"><p class="text-[10px] font-mono text-orange-500 font-bold">${item.id}</p><span class="bg-orange-900/50 text-orange-400 text-[8px] px-2 py-1 rounded font-black uppercase tracking-widest">OUT</span></div><p class="text-sm font-black text-white uppercase truncate" title="${item.name}">${item.name}</p><p class="text-[9px] font-bold text-slate-500 mt-3 uppercase tracking-widest">Peminjam / Pemegang:</p><p class="text-xs font-medium text-slate-300 capitalize truncate mt-1">${item.holder}</p></div>`).join('')}</div></div>` : `<div class="bg-emerald-950/20 border border-emerald-900/50 rounded-[40px] p-6 md:p-8 shadow-xl flex items-center gap-4 hud-card mb-6"><i data-lucide="shield-check" class="w-8 h-8 text-emerald-500 shrink-0"></i><div><h3 class="text-xs md:text-sm font-black text-emerald-500 uppercase tracking-widest">Kondisi Gudang Terkendali</h3><p class="text-[9px] md:text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mt-1">Seluruh aset terdaftar saat ini berada di dalam penyimpanan (Aman).</p></div></div>`;
+            const overdueItemsHtml = overdueItems.length > 0 ? `<div class="bg-red-950/40 border-2 border-red-600/50 rounded-[40px] p-6 md:p-8 shadow-xl overdue-pulse warning-pulse hud-card hud-red mb-6"><div class="flex justify-between items-center mb-6"><h3 class="text-xs md:text-sm font-black text-red-500 uppercase flex items-center gap-3 tracking-widest leading-relaxed"><i data-lucide="siren" class="w-6 h-6 shrink-0"></i> PERINGATAN KRITIS: ${overdueItems.length} ASET JATUH TEMPO</h3></div><div class="flex overflow-x-auto custom-scrollbar gap-4 pb-4">${overdueItems.map(item => `<div class="bg-red-900/20 border border-red-500/50 rounded-3xl p-5 min-w-[200px] md:min-w-[240px] shrink-0 shadow-lg bg-carbon relative group"><button onclick="openIndividualOverdue('${item.id}')" title="Ubah Alarm Manual" class="absolute top-4 right-4 z-20 btn-interact text-red-500 hover:text-white bg-red-950 p-1.5 rounded-lg border border-red-500/50 shadow-md"><i data-lucide="alarm-clock" class="w-4 h-4"></i></button><div class="flex justify-between items-start mb-2 pr-8"><p class="text-[10px] font-mono text-red-400 font-bold">${item.id}</p><span class="bg-red-600 text-white text-[8px] px-2 py-1 rounded font-black uppercase tracking-widest flex items-center gap-1">OVERDUE ${item.customOverdueHours ? `<span class="text-red-200 ml-1">(${item.customOverdueHours}H)</span>` : ''}</span></div><p class="text-sm font-black text-white uppercase truncate" title="${item.name}">${item.name}</p><p class="text-[9px] font-bold text-red-300 mt-3 uppercase tracking-widest">Peminjam / Pemegang:</p><p class="text-xs font-medium text-white capitalize truncate mt-1">${item.holder}</p></div>`).join('')}</div></div>` : '';
+            const outstandingItemsHtml = outItems.length > 0 ? `<div class="bg-orange-950/20 border border-orange-900/50 rounded-[40px] p-6 md:p-8 shadow-xl warning-pulse hud-card hud-orange mb-6"><h3 class="text-xs md:text-sm font-black text-orange-500 uppercase flex items-center gap-3 mb-6 tracking-widest leading-relaxed"><i data-lucide="alert-triangle" class="w-5 h-5 shrink-0"></i> Peringatan: ${outItems.length} Aset Sedang Dipinjam (Belum Kembali)</h3><div class="flex overflow-x-auto custom-scrollbar gap-4 pb-4">${outItems.map(item => `<div class="bg-[#020617] border border-orange-900/30 rounded-3xl p-5 min-w-[200px] md:min-w-[240px] shrink-0 hover:border-orange-500 transition-colors shadow-lg bg-carbon relative"><button onclick="openIndividualOverdue('${item.id}')" title="Set Alarm Manual" class="absolute top-4 right-4 z-20 btn-interact text-slate-500 hover:text-orange-500 bg-[#1e293b] p-1.5 rounded-lg border border-slate-700 shadow-md"><i data-lucide="alarm-clock" class="w-4 h-4"></i></button><div class="flex justify-between items-start mb-2 pr-8"><p class="text-[10px] font-mono text-orange-500 font-bold">${item.id}</p><span class="bg-orange-900/50 text-orange-400 text-[8px] px-2 py-1 rounded font-black uppercase tracking-widest flex items-center gap-1">OUT ${item.customOverdueHours ? `<span class="text-orange-300 ml-1">(${item.customOverdueHours}H)</span>` : ''}</span></div><p class="text-sm font-black text-white uppercase truncate" title="${item.name}">${item.name}</p><p class="text-[9px] font-bold text-slate-500 mt-3 uppercase tracking-widest">Peminjam / Pemegang:</p><p class="text-xs font-medium text-slate-300 capitalize truncate mt-1">${item.holder}</p></div>`).join('')}</div></div>` : `<div class="bg-emerald-950/20 border border-emerald-900/50 rounded-[40px] p-6 md:p-8 shadow-xl flex items-center gap-4 hud-card mb-6"><i data-lucide="shield-check" class="w-8 h-8 text-emerald-500 shrink-0"></i><div><h3 class="text-xs md:text-sm font-black text-emerald-500 uppercase tracking-widest">Kondisi Gudang Terkendali</h3><p class="text-[9px] md:text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mt-1">Seluruh aset terdaftar saat ini berada di dalam penyimpanan (Aman).</p></div></div>`;
 
             document.getElementById('content-container').innerHTML = `
                 <div class="content-section space-y-6 md:space-y-10">
                     <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-2">
                         <div>
-                            <h2 class="text-2xl md:text-4xl font-black text-white italic tracking-tighter uppercase leading-tight flex items-center gap-3"><span class="text-emerald-500/50 mr-2">[</span>STATUS GUDANG SENJATA<span class="text-emerald-500/50 ml-2">]</span><button onclick="openOverdueSetting()" class="bg-slate-800 text-slate-400 hover:text-white hover:bg-red-600 p-2 rounded-xl transition-all border border-slate-700 btn-interact" title="Pengaturan Alarm Overdue"><i data-lucide="bell-ring" class="w-5 h-5"></i></button></h2>
+                            <h2 class="text-2xl md:text-4xl font-black text-white italic tracking-tighter uppercase leading-tight flex items-center gap-3"><span class="text-emerald-500/50 mr-2">[</span>STATUS GUDANG SENJATA<span class="text-emerald-500/50 ml-2">]</span><button onclick="openOverdueSetting()" class="bg-slate-800 text-slate-400 hover:text-white hover:bg-red-600 p-2 rounded-xl transition-all border border-slate-700 btn-interact" title="Pengaturan Alarm Global"><i data-lucide="bell-ring" class="w-5 h-5"></i></button></h2>
                             <p class="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-widest mt-2">Sistem Kendali Inventaris Taktis</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
@@ -775,7 +830,10 @@
                     ${list.map(item => `
                         <div class="bg-[#020617] p-4 md:p-5 rounded-3xl border border-slate-800 flex flex-col justify-between group hover:border-slate-600 transition-all">
                             <div class="mb-4">
-                                <div class="flex justify-between items-start"><p class="text-[9px] font-mono text-emerald-500 font-bold">${item.id}</p><p class="text-[8px] font-black text-slate-600 uppercase">S/N: <span class="font-mono">${item.serial}</span></p></div>
+                                <div class="flex justify-between items-start pr-8 relative">
+                                    <div><p class="text-[9px] font-mono text-emerald-500 font-bold">${item.id}</p><p class="text-[8px] font-black text-slate-600 uppercase">S/N: <span class="font-mono">${item.serial}</span></p></div>
+                                    ${item.status === 'Keluar' ? `<button onclick="openIndividualOverdue('${item.id}')" title="Set Alarm Manual" class="absolute top-0 right-0 btn-interact text-slate-500 hover:text-orange-500 bg-[#1e293b] p-1.5 rounded-md border border-slate-700 shadow-md"><i data-lucide="alarm-clock" class="w-4 h-4"></i></button>` : ''}
+                                </div>
                                 <p class="text-sm font-black text-white uppercase mt-1 leading-tight">${item.name}</p>
                                 <p class="text-[9px] font-bold text-slate-400 mt-2 uppercase">Peminjam / Pemegang:</p><p class="text-[10px] font-medium text-emerald-600 capitalize bg-emerald-950/20 px-2 py-1 rounded inline-block mt-1">${item.holder}</p>
                             </div>
@@ -1159,7 +1217,7 @@
 
         window.openOverdueSetting = function() { document.getElementById('overdue-input').value = appSettings.overdueLimitHours || 24; document.getElementById('overdue-modal').classList.remove('hidden'); };
         window.closeOverdueSetting = function() { document.getElementById('overdue-modal').classList.add('hidden'); };
-        window.saveOverdueSetting = function() { const val = parseInt(document.getElementById('overdue-input').value); if (val > 0) { appSettings.overdueLimitHours = val; save(); closeOverdueSetting(); renderDashboard(); showAlert("BERHASIL! Batas waktu Alarm Overdue kini diatur menjadi " + val + " Jam."); } else { showAlert("ERROR: Masukkan angka jam yang valid (Minimal 1)!"); } };
+        window.saveOverdueSetting = function() { const val = parseInt(document.getElementById('overdue-input').value); if (val > 0) { appSettings.overdueLimitHours = val; save(); closeOverdueSetting(); renderDashboard(); showAlert("BERHASIL! Batas waktu Alarm Overdue Global kini diatur menjadi " + val + " Jam."); } else { showAlert("ERROR: Masukkan angka jam yang valid (Minimal 1)!"); } };
 
         window.openChangePasswordModal = function() { document.getElementById('cp-current').value = ''; document.getElementById('cp-new').value = ''; document.getElementById('cp-confirm').value = ''; document.getElementById('password-modal').classList.remove('hidden'); };
         window.closeChangePasswordModal = function() { document.getElementById('password-modal').classList.add('hidden'); };
