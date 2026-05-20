@@ -174,7 +174,11 @@
         <div class="p-6 md:p-8 border-t border-slate-900/50 bg-[#010413]/50 shrink-0">
             <div class="flex justify-between items-center gap-3">
                 <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-black text-emerald-500 cyber-cut" id="user-initial">R</div><div class="text-left"><p class="text-[11px] font-black text-white uppercase truncate max-w-[90px]" id="user-display-name">RYO KUN</p><p class="text-[9px] text-emerald-600 font-bold uppercase tracking-widest" id="user-role-name">Admin</p></div></div>
-                <div class="flex gap-2"><button onclick="openChangePasswordModal()" class="btn-interact text-slate-400 hover:text-blue-500 bg-slate-900/50 p-2 rounded-xl border border-slate-800"><i data-lucide="key" class="w-5 h-5"></i></button><button onclick="logout()" class="btn-interact text-slate-400 hover:text-red-500 bg-slate-900/50 p-2 rounded-xl border border-slate-800"><i data-lucide="log-out" class="w-5 h-5"></i></button></div>
+                <div class="flex gap-2">
+                    <button id="auto-logout-btn" onclick="toggleAutoLogout()" class="btn-interact text-emerald-500 bg-slate-900/50 p-2 rounded-xl border border-emerald-500/50 transition-colors" title="Auto Logout 2 Jam (Aktif)"><i data-lucide="timer" class="w-5 h-5"></i></button>
+                    <button onclick="openChangePasswordModal()" class="btn-interact text-slate-400 hover:text-blue-500 bg-slate-900/50 p-2 rounded-xl border border-slate-800"><i data-lucide="key" class="w-5 h-5"></i></button>
+                    <button onclick="logout()" class="btn-interact text-slate-400 hover:text-red-500 bg-slate-900/50 p-2 rounded-xl border border-slate-800"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                </div>
             </div>
         </div>
     </aside>
@@ -586,9 +590,37 @@
             } catch (e) {}
         }
 
+        let isAutoLogoutEnabled = true;
         let inactivityTimeout; const INACTIVITY_TIME_LIMIT = 2 * 60 * 60 * 1000; 
-        function resetAutoLogout() { clearTimeout(inactivityTimeout); if (currentUser) { inactivityTimeout = setTimeout(() => { logout(); alert("Sesi Anda telah berakhir secara otomatis karena tidak ada aktivitas."); }, INACTIVITY_TIME_LIMIT); } }
+        function resetAutoLogout() { 
+            clearTimeout(inactivityTimeout); 
+            if (currentUser && isAutoLogoutEnabled) { 
+                inactivityTimeout = setTimeout(() => { 
+                    logout(); 
+                    alert("Sesi Anda telah berakhir secara otomatis karena tidak ada aktivitas selama 2 jam."); 
+                }, INACTIVITY_TIME_LIMIT); 
+            } 
+        }
         function setupActivityListeners() { ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll'].forEach(evt => { document.addEventListener(evt, resetAutoLogout, { passive: true }); }); }
+        
+        window.toggleAutoLogout = function() {
+            isAutoLogoutEnabled = !isAutoLogoutEnabled;
+            const btn = document.getElementById('auto-logout-btn');
+            if(isAutoLogoutEnabled) {
+                btn.classList.replace('text-slate-400', 'text-emerald-500');
+                btn.classList.replace('border-slate-800', 'border-emerald-500/50');
+                btn.title = "Auto Logout 2 Jam (Aktif)";
+                resetAutoLogout();
+                if(typeof triggerDroneMessage === 'function') triggerDroneMessage("AUTO LOGOUT 2 JAM DIAKTIFKAN", "success");
+            } else {
+                btn.classList.replace('text-emerald-500', 'text-slate-400');
+                btn.classList.replace('border-emerald-500/50', 'border-slate-800');
+                btn.title = "Auto Logout 2 Jam (Nonaktif)";
+                clearTimeout(inactivityTimeout);
+                if(typeof triggerDroneMessage === 'function') triggerDroneMessage("AUTO LOGOUT 2 JAM DINONAKTIFKAN", "warning");
+            }
+        };
+        
         function startClock() {
             setInterval(() => {
                 const now = new Date(); const hours = String(now.getHours()).padStart(2, '0'); const minutes = String(now.getMinutes()).padStart(2, '0'); const seconds = String(now.getSeconds()).padStart(2, '0');
